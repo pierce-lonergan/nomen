@@ -96,13 +96,36 @@ The loop's own assumptions are instrumented as five testable hypotheses, includi
 adversarial toward the app's headline mechanic: *is the streak actually doing anything, or is
 retrieval volume the whole story?* If the data says the streak is decorative, the streak should go.
 
+## How it looks
+
+**Nomen looks like a ruled instrument built to hold people's names, and the name is always the
+largest thing on the page.** One 16px left rule runs down every screen; nothing is centred, because
+a razor-straight left edge is what makes a page scannable by someone half asleep at 22:40.
+
+Three voices, one job each — a grotesque for the instrument, a monospace with tabular figures for
+everything measured, and **a serif for a human being's name and nothing else, anywhere.** That
+reservation is the whole emotional argument: it makes the change of typeface itself the semantic
+marker, so if it is in the serif, it is a person you care about. (A character in a novel is a
+person. A place is not. The branch lives in the domain, with a test.)
+
+The reveal — which happens ten to twenty times a night for a year — is a 2px terracotta rule
+drawing itself left to right over 320ms with a serif name rising six pixels to land on it. No
+flash, no burst, no haptic. The accent appears exactly once per card and that is it.
+
+Where a number cannot be honestly stated, a figure dash sits in the number's slot, at the number's
+size, with `n = 4 · needs 10` beneath it and the label at full strength — a refusal has the same
+weight as an answer, because a refusal is an answer.
+
+Full reasoning in [`docs/08-visual-system.md`](docs/08-visual-system.md).
+
 ## Running it
 
 ```bash
 npm install
 npm run dev            # http://localhost:5173
-npm test               # 87 unit tests over the domain engines
+npm test               # 111 unit tests over the domain engines and the design laws
 npm run build          # typecheck + production bundle
+npm run check:contrast # fails on any token pair below WCAG AA, in either theme
 npm run smoke          # optional: browser pass over every screen (needs a preview server)
 ```
 
@@ -114,7 +137,7 @@ populate a simulated eight months of practice — deterministic, clearly fiction
 
 ```
 nomen/
-├── docs/                     the argument: spec, engagement research, year program, evidence map
+├── docs/                     the argument: spec, engagement research, year program, evidence map, visual system
 ├── src/
 │   ├── domain/               pure, dependency-free, fully unit-tested — the whole product's logic
 │   │   ├── scheduler/        ladder · grading · cue ladder · load balancer
@@ -125,7 +148,7 @@ nomen/
 │   │   └── drills/           the drill catalogue, with its evidence
 │   ├── data/                 IndexedDB schema, export/import, demo generator
 │   ├── state/                the single orchestration layer
-│   └── ui/                   screens and components
+│   └── ui/                   tokens.css, styles.css, screens, charts, icons
 └── tests/                    vitest, over the domain only
 ```
 
@@ -154,6 +177,7 @@ and no more. See [`docs/06-privacy.md`](docs/06-privacy.md).
 | [`04-architecture.md`](docs/04-architecture.md) | Scheduler algorithm, grading table, image-variety gate, metrics, persistence |
 | [`05-evidence-map.md`](docs/05-evidence-map.md) | 27 claims → source → confidence → the code implementing it, plus deliberate omissions |
 | [`06-privacy.md`](docs/06-privacy.md) | Commitments, what the app won't invite you to record, residual risk |
+| [`08-visual-system.md`](docs/08-visual-system.md) | The design: three voices, the type-size law, the refusal, motion, and the charter enforced in CSS |
 | [`07-roadmap.md`](docs/07-roadmap.md) | What's built, what's next, and what is explicitly out of scope |
 
 ## Evidence standard

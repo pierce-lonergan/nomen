@@ -20,6 +20,18 @@ Mirrors the GitHub issue backlog. Sequenced by leverage against the research, no
 - Local-first IndexedDB persistence, export/import, hard cascade delete, deterministic demo data
 - 87 unit tests over the domain layer; browser smoke test over every screen
 
+## Built (v0.2 — the visual system)
+
+- A complete design system: tokens for both themes, a seven-step type scale, seven named
+  transitions and zero `@keyframes`. The argument is in `08-visual-system.md`.
+- The serif reserved to human names, branched in the domain and covered by tests
+- The retention curve, adherence bars and latency curve wired into Insights, with sparse points
+  rendered hollow and unjoined so a trend line cannot claim more than the data
+- A drawn icon set replacing the text glyphs; light / dark / system theming with a pre-sleep variant
+- **Onboarding**, which states the achievable *and unachievable* outcomes before anything else —
+  previously specified, written, and never wired up
+- `npm run check:contrast` as a build gate, and 12 tests asserting the design laws
+
 ## Next — highest leverage first
 
 1. **Voice capture and the Voice → Name drill.** The registry and schedule modes exist; recording,
