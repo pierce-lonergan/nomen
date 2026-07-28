@@ -1,0 +1,401 @@
+import { useMemo, useState } from 'react'
+import { useStore } from '../../state/store'
+import type { AssessmentResult } from '../../domain/types'
+import { BASELINE_INSTRUMENTS, computeVerdict } from '../../domain/assessment/verdict'
+import { ASSESSMENT_NAMES, faceParams, faceVariant, pick } from '../../lib/stimuli'
+import { speakInNoise, speechAvailable } from '../../lib/audio'
+import { SyntheticFace } from '../SyntheticFace'
+import { Evidence, Header, Stat } from '../components'
+
+/**
+ * Phase 0 — baseline and rule-outs.
+ *
+ * The point is routing, not scoring: several *non-memory* factors produce name failure, and they
+ * should be ruled out before the problem is attributed to memory at all. The verdict this produces
+ * changes what Phase 1 emphasises.
+ *
+ * Items here are held out from training items on purpose. Measuring yourself on the material you
+ * have been drilling tells you about the drilling, not about you.
+ */
+export default function Baseline() {
+  const state = useStore()
+  const [running, setRunning] = useState<AssessmentResult['kind'] | null>(null)
+  const done = new Set(state.assessments.map((a) => a.kind))
+  const verdict = state.assessments.length > 0 ? computeVerdict(state.assessments) : null
+
+  async function record(kind: AssessmentResult['kind'], score: number, n: number) {
+    await state.recordAssessment({ id: `${kind}-${Date.now()}`, at: Date.now(), kind, score, n })
+    setRunning(null)
+  }
+
+  if (running === 'FACE_NAME') return <FaceNameTest onDone={(s, n) => void record('FACE_NAME', s, n)} />
+  if (running === 'FACE_INDIVIDUATION')
+    return <IndividuationTest onDone={(s, n) => void record('FACE_INDIVIDUATION', s, n)} />
+  if (running === 'NAME_IN_NOISE') return <NoiseTest onDone={(s, n) => void record('NAME_IN_NOISE', s, n)} />
+  if (running === 'CONFOUND_SCREEN') return <ConfoundScreen onDone={(s, n) => void record('CONFOUND_SCREEN', s, n)} />
+
+  return (
+    <>
+      <Header
+        title="Baseline"
+        sub="Four short instruments. They decide what you train first — which matters more than it sounds, because the four routes lead to genuinely different programmes."
+        back="/program"
+      />
+
+      {BASELINE_INSTRUMENTS.map((inst) => {
+        const latest = state.assessments.filter((a) => a.kind === inst.kind).sort((a, b) => b.at - a.at)[0]
+        return (
+          <div key={inst.kind} className="card">
+            <div className="row between">
+              <strong>{inst.label}</strong>
+              {done.has(inst.kind) && <span className="pill good">done</span>}
+            </div>
+            <p className="small muted" style={{ marginTop: 6 }}>
+              {inst.blurb}
+            </p>
+            {latest && (
+              <div className="dim">
+                Last result: {Math.round(latest.score * 100)}% (n={latest.n})
+              </div>
+            )}
+            <div className="spacer" />
+            <button className={done.has(inst.kind) ? 'full' : 'primary full'} onClick={() => setRunning(inst.kind)}>
+              {done.has(inst.kind) ? 'Re-test' : 'Start'}
+            </button>
+          </div>
+        )
+      })}
+
+      {verdict && (
+        <>
+          <h2>Your route</h2>
+          <div className="card accent">
+            <h3>{verdict.headline}</h3>
+            <p className="small muted">{verdict.reasoning}</p>
+            <ul className="small" style={{ paddingLeft: 18 }}>
+              {verdict.emphasis.map((e) => (
+                <li key={e}>{e}</li>
+              ))}
+            </ul>
+            {verdict.flags.map((f) => (
+              <p key={f} className="small muted">
+                {f}
+              </p>
+            ))}
+          </div>
+        </>
+      )}
+
+      <Evidence>
+        These are procedurally generated stimuli, held out from your own people. That makes them a
+        routing instrument rather than a clinical assessment — synthetic faces are a weaker proxy
+        for real face individuation than photographs would be. Re-test monthly and compare like with
+        like; a validated instrument would be better and this app does not pretend to be one.
+      </Evidence>
+    </>
+  )
+}
+
+/** Learn eight face–name pairs, sit through a distractor, then recall. The primary anchor. */
+function FaceNameTest({ onDone }: { onDone: (score: number, n: number) => void }) {
+  const seed = useMemo(() => `fn-${Date.now()}`, [])
+  const names = useMemo(() => pick(ASSESSMENT_NAMES, 8, seed), [seed])
+  const [stage, setStage] = useState<'STUDY' | 'DISTRACT' | 'TEST' | 'RESULT'>('STUDY')
+  const [index, setIndex] = useState(0)
+  const [answers, setAnswers] = useState<string[]>([])
+  const [current, setCurrent] = useState('')
+  const [countdown, setCountdown] = useState(30)
+
+  if (stage === 'STUDY') {
+    const name = names[index]
+    return (
+      <>
+        <Header title={`Learn ${index + 1}/8`} sub="Run the protocol on these too: look, say it aloud, make one hook." />
+        <div className="card center">
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <SyntheticFace params={faceParams(name)} size={180} />
+          </div>
+          <div className="big-prompt">{name}</div>
+        </div>
+        <button
+          className="primary full"
+          onClick={() => {
+            if (index === names.length - 1) {
+              setStage('DISTRACT')
+              const id = setInterval(() => {
+                setCountdown((c) => {
+                  if (c <= 1) {
+                    clearInterval(id)
+                    setStage('TEST')
+                    return 0
+                  }
+                  return c - 1
+                })
+              }, 1000)
+            } else setIndex((i) => i + 1)
+          }}
+        >
+          Next
+        </button>
+      </>
+    )
+  }
+
+  if (stage === 'DISTRACT') {
+    return (
+      <>
+        <Header title="Wait" sub="A filled delay, so this measures retrieval rather than what is still echoing in your head." />
+        <div className="card center">
+          <div className="big-prompt mono">{countdown}</div>
+          <p className="small muted">Count backwards from 100 in sevens until this reaches zero.</p>
+        </div>
+      </>
+    )
+  }
+
+  if (stage === 'TEST') {
+    const name = names[index]
+    return (
+      <>
+        <Header title={`Recall ${index + 1}/8`} />
+        <div className="card center">
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <SyntheticFace params={faceParams(name)} size={180} />
+          </div>
+        </div>
+        <div className="field">
+          <label htmlFor="answer">Their name</label>
+          <input id="answer" value={current} onChange={(e) => setCurrent(e.target.value)} autoFocus autoComplete="off" />
+        </div>
+        <button
+          className="primary full"
+          onClick={() => {
+            const next = [...answers, current.trim()]
+            setAnswers(next)
+            setCurrent('')
+            if (index === names.length - 1) setStage('RESULT')
+            else setIndex((i) => i + 1)
+          }}
+        >
+          {index === names.length - 1 ? 'Finish' : 'Next'}
+        </button>
+      </>
+    )
+  }
+
+  const correct = answers.filter((a, i) => a.toLowerCase() === names[i].toLowerCase()).length
+  return (
+    <>
+      <Header title="Result" />
+      <div className="card">
+        <Stat label="Recalled" value={`${correct}/${names.length}`} />
+        {names.map((n, i) => (
+          <div key={n} className="stat">
+            <span className="small">{n}</span>
+            <span className={`small ${answers[i]?.toLowerCase() === n.toLowerCase() ? 'pill good' : 'pill'}`}>
+              {answers[i] || '—'}
+            </span>
+          </div>
+        ))}
+      </div>
+      <button className="primary full" onClick={() => onDone(correct / names.length, names.length)}>
+        Save result
+      </button>
+    </>
+  )
+}
+
+/** Match-to-sample across image variants — the face side of the binding. */
+function IndividuationTest({ onDone }: { onDone: (score: number, n: number) => void }) {
+  const seed = useMemo(() => `ind-${Date.now()}`, [])
+  const trials = 8
+  const [index, setIndex] = useState(0)
+  const [correct, setCorrect] = useState(0)
+
+  const targetName = pick(ASSESSMENT_NAMES, trials, seed)[index]
+  const foils = pick(
+    ASSESSMENT_NAMES.filter((n) => n !== targetName),
+    3,
+    `${seed}-${index}`,
+  )
+  const targetIdx = index % 4
+  const options = [...foils]
+  options.splice(targetIdx, 0, targetName)
+
+  if (index >= trials) {
+    return (
+      <>
+        <Header title="Result" />
+        <div className="card">
+          <Stat label="Matched" value={`${correct}/${trials}`} />
+          <p className="small muted">
+            Below about two-thirds here means faces are the weak side of your binding — you cannot
+            attach a name to a face you did not encode distinctly, so face work comes first.
+          </p>
+        </div>
+        <button className="primary full" onClick={() => onDone(correct / trials, trials)}>
+          Save result
+        </button>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <Header title={`Match ${index + 1}/${trials}`} sub="Which of these is the same person, shown differently?" />
+      <div className="card center">
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <SyntheticFace params={faceParams(targetName)} size={150} />
+        </div>
+      </div>
+      <div className="row wrap" style={{ justifyContent: 'center' }}>
+        {options.map((name, i) => (
+          <button
+            key={`${name}-${i}`}
+            style={{ padding: 6 }}
+            onClick={() => {
+              if (i === targetIdx) setCorrect((c) => c + 1)
+              setIndex((n) => n + 1)
+            }}
+          >
+            <SyntheticFace params={faceVariant(faceParams(name), index + 1)} size={100} />
+          </button>
+        ))}
+      </div>
+    </>
+  )
+}
+
+/** Names spoken over babble. Separates hearing the name from remembering it. */
+function NoiseTest({ onDone }: { onDone: (score: number, n: number) => void }) {
+  const seed = useMemo(() => `noise-${Date.now()}`, [])
+  const trials = 8
+  const names = useMemo(() => pick(ASSESSMENT_NAMES, trials, seed), [seed])
+  const [index, setIndex] = useState(0)
+  const [answer, setAnswer] = useState('')
+  const [correct, setCorrect] = useState(0)
+  const [played, setPlayed] = useState(false)
+
+  if (!speechAvailable()) {
+    return (
+      <>
+        <Header title="Names in noise" back="/baseline" />
+        <div className="card">
+          <p>
+            This browser has no speech synthesis, so this instrument cannot run here. It is the one
+            test that needs it — everything else works offline without audio.
+          </p>
+          <p className="small muted">
+            If your name failures cluster in bars and parties, treat that pattern as evidence in its
+            own right: it points at hearing the name rather than remembering it.
+          </p>
+        </div>
+      </>
+    )
+  }
+
+  if (index >= trials) {
+    return (
+      <>
+        <Header title="Result" />
+        <div className="card">
+          <Stat label="Heard correctly" value={`${correct}/${trials}`} />
+          <p className="small muted">
+            A low score here is not a memory result. Proper names are low-frequency and carry no
+            semantic redundancy, so when they are masked there is nothing for your brain to repair
+            them with — the name is often never accurately perceived at all.
+          </p>
+        </div>
+        <button className="primary full" onClick={() => onDone(correct / trials, trials)}>
+          Save result
+        </button>
+      </>
+    )
+  }
+
+  // Noise rises across trials so the test finds a threshold rather than a ceiling.
+  const noiseGain = 0.05 + index * 0.035
+
+  return (
+    <>
+      <Header title={`Listen ${index + 1}/${trials}`} sub="Play it once, then type what you heard. Guessing is fine." />
+      <div className="card center">
+        <button
+          className="primary"
+          onClick={() => {
+            speakInNoise(names[index], noiseGain)
+            setPlayed(true)
+          }}
+        >
+          {played ? 'Play again' : 'Play'}
+        </button>
+        <div className="dim" style={{ marginTop: 10 }}>
+          background level {Math.round(noiseGain * 100)}%
+        </div>
+      </div>
+      <div className="field">
+        <label htmlFor="heard">What did you hear?</label>
+        <input id="heard" value={answer} onChange={(e) => setAnswer(e.target.value)} autoComplete="off" />
+      </div>
+      <button
+        className="full"
+        disabled={!played}
+        onClick={() => {
+          if (answer.trim().toLowerCase() === names[index].toLowerCase()) setCorrect((c) => c + 1)
+          setAnswer('')
+          setPlayed(false)
+          setIndex((i) => i + 1)
+        }}
+      >
+        Next
+      </button>
+    </>
+  )
+}
+
+const SCREEN_QUESTIONS = [
+  { id: 'sleep', text: 'I regularly get less sleep than I need.' },
+  { id: 'noise', text: 'My name failures happen mostly in loud places.' },
+  { id: 'alcohol', text: 'I often meet new people while drinking.' },
+  { id: 'stress', text: 'Introductions make me tense or self-conscious.' },
+  { id: 'attention', text: 'My attention wanders during introductions.' },
+  { id: 'hearing', text: 'I ask people to repeat themselves in busy rooms.' },
+]
+
+function ConfoundScreen({ onDone }: { onDone: (score: number, n: number) => void }) {
+  const [answers, setAnswers] = useState<Record<string, number>>({})
+  const complete = SCREEN_QUESTIONS.every((q) => answers[q.id] !== undefined)
+  const risk =
+    SCREEN_QUESTIONS.reduce((s, q) => s + (answers[q.id] ?? 0), 0) / (SCREEN_QUESTIONS.length * 4)
+
+  return (
+    <>
+      <Header
+        title="Context screener"
+        sub="Not a diagnosis. These are the ordinary, non-memory reasons a name fails to stick — worth ruling out before blaming your memory."
+        back="/baseline"
+      />
+      {SCREEN_QUESTIONS.map((q) => (
+        <div key={q.id} className="card tight">
+          <div className="small" style={{ marginBottom: 8 }}>
+            {q.text}
+          </div>
+          <div className="chips">
+            {['Never', 'Rarely', 'Sometimes', 'Often', 'Always'].map((label, value) => (
+              <button
+                key={label}
+                className={`chip${answers[q.id] === value ? ' on' : ''}`}
+                onClick={() => setAnswers((a) => ({ ...a, [q.id]: value }))}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <button className="primary full" disabled={!complete} onClick={() => onDone(risk, SCREEN_QUESTIONS.length)}>
+        Save
+      </button>
+    </>
+  )
+}
