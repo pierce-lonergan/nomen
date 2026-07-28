@@ -1,0 +1,79 @@
+name: Build and deploy
+
+# The app is a purely static, network-free SPA, so GitHub Pages is a natural fit: the entire
+# deploy is the contents of `dist/`. Nothing about the running app talks to a server, and every
+# person's data stays in their own browser's IndexedDB — publishing the site publishes the
+# *program*, never anyone's records.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel a deploy midway; queue instead.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The project's own quality gates run BEFORE anything is published, so a regression in the
+      # honesty rails, the design laws, or colour contrast blocks the deploy rather than shipping
+      # quietly. That is the point of having made them executable.
+      - name: Unit tests (domain engines + design laws)
+        run: npm test
+
+      - name: WCAG AA contrast gate (both themes)
+        run: npm run check:contrast
+
+      - name: Typecheck and build
+        run: npm run build
+
+      # Pages serves through Jekyll by default, which silently drops files and folders beginning
+      # with an underscore. Vite does not emit any today, but this costs nothing and removes a
+      # whole class of "it works locally" failure.
+      - name: Disable Jekyll processing
+        run: touch dist/.nojekyll
+
+      - name: Smoke test every screen against the built bundle
+        run: |
+          npx playwright install --with-deps chromium
+          npx vite preview --port 4173 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:4173/ && break
+            sleep 1
+          done
+          npm run smoke
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: dist
+
+  deploy:
+    # Only main deploys; pull requests run the gates and stop there.
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

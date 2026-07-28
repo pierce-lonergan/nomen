@@ -133,6 +133,36 @@ There is no configuration and no environment file. Open **Settings → Generate 
 populate a simulated eight months of practice — deterministic, clearly fictional, and safe to wipe
 — so the Insights and Program screens have something to show.
 
+## Deploying it
+
+The app is a purely static SPA with **no backend and no runtime network calls**, so it deploys as a
+folder of files. `.github/workflows/pages.yml` builds and publishes it to GitHub Pages on every
+push to `main`.
+
+The deploy runs the project's own gates first — unit tests, the WCAG contrast gate, a typecheck,
+and a browser pass over all ten screens — so a regression in the honesty rails, the design laws, or
+colour contrast **blocks the deploy** rather than shipping quietly. Pull requests run the same
+gates and stop before publishing.
+
+To turn it on: **Settings → Pages → Source → GitHub Actions**, then push to `main`.
+
+Two properties make this painless, and both were decided long before Pages was on the table:
+
+- `base: './'` in `vite.config.ts` emits relative asset paths, so the bundle works unchanged at a
+  project sub-path (`/nomen/`), at a domain root, or opened from `file://`.
+- The app uses `HashRouter`, so deep links like `/nomen/#/insights` resolve client-side. Static
+  hosts serve one `index.html`; a history-mode router would need a 404.html rewrite hack, and this
+  one does not.
+
+**What publishing does and does not expose.** It publishes the *program*. It cannot publish anyone's
+records: there is no server, and every person's photographs, notes and schedule live only in their
+own browser's IndexedDB. Two visitors to the same URL share no data at all.
+
+Note that a GitHub Pages **site is publicly reachable even when its repository is private** —
+restricting site visibility is an Enterprise-only feature. Keep that in mind if you would rather the
+app not be openly linkable; the alternative is to run it locally with `npm run dev`, or to build and
+host `dist/` behind whatever access control you prefer.
+
 ## Structure
 
 ```
