@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { isHuman, type MediaRef, type Person } from '../domain/types'
 import { confidenceCeiling, FACE_CONFIDENCE_COPY } from '../domain/faceVariety'
@@ -100,7 +100,9 @@ export function Bar({ value, sufficient = true }: { value: number; sufficient?: 
 
 export function FaceConfidenceBadge({ person, media }: { person: Person; media: MediaRef[] }) {
   const level = confidenceCeiling(person, media)
-  const cls = level === 'PHOTO_ONLY' ? 'warn' : level === 'ROBUST' ? 'good' : ''
+  // Insufficiency is neutral. PHOTO_ONLY is a shortfall in the app's records, not an alarming
+  // fact about a person, and it is the same judgement People.tsx makes for the re-encode flag.
+  const cls = level === 'ROBUST' ? 'good' : ''
   return (
     <div>
       <span className={`pill ${cls}`.trim()}>{level.replace('_', ' ').toLowerCase()}</span>
@@ -150,6 +152,15 @@ export function Empty({ title, body, action }: { title: string; body: string; ac
   )
 }
 
+/**
+ * A single-select chip group.
+ *
+ * Declaring `role="radiogroup"` obliges the component to honour the radiogroup keyboard contract,
+ * and announcing as a radio while ignoring the arrow keys is worse than announcing as a button —
+ * a screen-reader user in forms mode presses Right, nothing happens, and the control reads as
+ * broken. So: roving tabindex (the group is one tab stop, not N) and arrow keys that move the
+ * selection with wrap-around.
+ */
 export function Chips<T extends string>({
   options,
   value,
@@ -161,14 +172,31 @@ export function Chips<T extends string>({
   onChange: (v: T) => void
   label?: string
 }) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([])
+
+  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    const forward = e.key === 'ArrowRight' || e.key === 'ArrowDown'
+    const back = e.key === 'ArrowLeft' || e.key === 'ArrowUp'
+    if (!forward && !back) return
+    e.preventDefault()
+    const current = options.findIndex((o) => o.value === value)
+    const next = (current + (forward ? 1 : -1) + options.length) % options.length
+    onChange(options[next].value)
+    refs.current[next]?.focus()
+  }
+
   return (
-    <div className="chips" role="radiogroup" aria-label={label}>
-      {options.map((o) => (
+    <div className="chips" role="radiogroup" aria-label={label} onKeyDown={onKeyDown}>
+      {options.map((o, i) => (
         <button
           key={o.value}
+          ref={(el) => {
+            refs.current[i] = el
+          }}
           type="button"
           role="radio"
           aria-checked={value === o.value}
+          tabIndex={value === o.value ? 0 : -1}
           className={`chip${value === o.value ? ' on' : ''}`}
           onClick={() => onChange(o.value)}
         >

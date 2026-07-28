@@ -91,6 +91,8 @@ export default function Insights() {
           label="Faster than when you started"
           value={improvement ? `${Math.round(improvement.percentFaster)}` : '—'}
           unit="%"
+          n={improvement?.n ?? latencies.length}
+          needs={40}
           insufficient={!improvement}
         />
         <Stat
@@ -142,11 +144,12 @@ export default function Insights() {
         caption={`Share of introductions in the last 14 days where each beat was logged${beats.n < MIN_N ? ' — too few to read much into yet' : ''}`}
       />
       <p className="record-note">
-        The beat you drop under pressure is the one to work on. Most people drop LOOK first, which
-        is attention turning inward at exactly the wrong moment.
+        The beat you drop under pressure is the one to work on. If LOOK is your lowest bar, that is
+        attention turning inward at exactly the wrong moment — and the countermeasure is to look
+        while you say it, not after.
       </p>
 
-      {divided.n > 0 && (
+      {divided.dividedN > 0 && (
         <>
           <h2>Lab versus life</h2>
           <div className="card">
@@ -154,22 +157,24 @@ export default function Insights() {
               label="Undistracted"
               value={divided.focused === null ? '—' : `${Math.round(divided.focused * 100)}`}
               unit="%"
-              insufficient={divided.focused === null}
+              n={divided.focusedN}
+              needs={MIN_N}
+              insufficient={divided.focused === null || divided.focusedN < MIN_N}
             />
             <Stat
               label="With a second task running"
               value={divided.divided === null ? '—' : `${Math.round(divided.divided * 100)}`}
               unit="%"
-              n={divided.n}
+              n={divided.dividedN}
               needs={MIN_N}
-              insufficient={divided.n < MIN_N}
+              insufficient={divided.dividedN < MIN_N}
             />
             <Stat
               label="Gap"
               value={divided.gapPoints === null ? '—' : `${Math.round(divided.gapPoints)}`}
               unit="pts"
               hint="the phase-3 gate wants this within 20 points"
-              n={divided.n}
+              n={divided.dividedN}
               needs={MIN_N}
               insufficient={divided.gapPoints === null}
             />
@@ -209,17 +214,17 @@ export default function Insights() {
           label="Queue completion on pre-sleep-review days"
           value={preSleep.withReview === null ? '—' : `${Math.round(preSleep.withReview * 100)}`}
           unit="%"
-          n={preSleep.n}
+          n={preSleep.withReviewN}
           needs={MIN_N}
-          insufficient={preSleep.n < MIN_N || preSleep.withReview === null}
+          insufficient={preSleep.withReviewN < MIN_N || preSleep.withReview === null}
         />
         <Stat
           label="…on days without it"
           value={preSleep.withoutReview === null ? '—' : `${Math.round(preSleep.withoutReview * 100)}`}
           unit="%"
-          n={preSleep.n}
+          n={preSleep.withoutReviewN}
           needs={MIN_N}
-          insufficient={preSleep.n < MIN_N || preSleep.withoutReview === null}
+          insufficient={preSleep.withoutReviewN < MIN_N || preSleep.withoutReview === null}
         />
         <Evidence>
           It would be embarrassing for an evidence-led app to run on a faith-based engagement model,

@@ -84,7 +84,7 @@ export default function Journal() {
       {moments.length === 0 ? (
         <Empty
           title="Nothing logged yet"
-          body="The first one usually happens sooner than people expect — often in week two, at a second meeting."
+          body="The entry to write is the one where a name landed in the world — a second meeting, a corridor, a shop. That moment is what the whole schedule is aiming at, and it is the only part of it the app cannot see unless you tell it."
         />
       ) : (
         <div>

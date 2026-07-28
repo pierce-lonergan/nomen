@@ -217,20 +217,28 @@ function criteriaFor(s: ProgramSnapshot): Criterion[] {
  * month three.
  */
 export function capabilityStatement(s: ProgramSnapshot): string {
-  const post = recallOf(s, 'POST_CONVERSATION')?.proportion
-  const week = recallOf(s, 'ONE_WEEK')?.proportion
-  const month = recallOf(s, 'ONE_MONTH')?.proportion
-  const parts: string[] = []
+  /**
+   * Every clause carries its own sample size, and a bucket below the threshold contributes
+   * nothing at all.
+   *
+   * This is the single most flattering sentence in the application — it is rendered with the
+   * app's one drop cap — and it previously stated a percentage whenever `n > 0`, so a single
+   * successful retrieval produced "You hold 100% of names past the end of the conversation".
+   * That is precisely the overstatement the honesty rail exists to prevent, in the one place it
+   * would be believed.
+   */
+  const clause = (bucket: DelayBucket, phrase: (pct: number) => string): string | null => {
+    const stat = recallOf(s, bucket)
+    if (!stat || stat.insufficient || stat.proportion === null) return null
+    return `${phrase(Math.round(stat.proportion * 100))} (n=${stat.n})`
+  }
 
-  if (post !== null && post !== undefined) {
-    parts.push(`You hold ${Math.round(post * 100)}% of names past the end of the conversation`)
-  }
-  if (week !== null && week !== undefined) {
-    parts.push(`${Math.round(week * 100)}% at a week`)
-  }
-  if (month !== null && month !== undefined) {
-    parts.push(`${Math.round(month * 100)}% at a month`)
-  }
+  const parts = [
+    clause('POST_CONVERSATION', (p) => `You hold ${p}% of names past the end of the conversation`),
+    clause('ONE_WEEK', (p) => `${p}% at a week`),
+    clause('ONE_MONTH', (p) => `${p}% at a month`),
+  ].filter((c): c is string => c !== null)
+
   if (parts.length === 0) return 'Not enough data yet to say anything honest about your recall.'
 
   const gains =

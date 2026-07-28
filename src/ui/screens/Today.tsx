@@ -74,8 +74,8 @@ export default function Today() {
             A quiet day is a normal day. The practice is the four beats at the next introduction —
             that part doesn’t live in the app.
           </p>
-          <Link to="/capture">
-            <button className="full">Someone new</button>
+          <Link to="/capture" className="btn full">
+            Someone new
           </Link>
         </div>
       )}
@@ -189,14 +189,14 @@ export default function Today() {
           lede size and the lifetime retrieval count at figure size directly beneath it, so the
           number that resets is literally the smaller number on the screen.
         */}
-        <Stat label={copy.headline} value={copy.sub} variant="streak" />
+        <Stat label="Streak" value={copy.headline} hint={copy.sub} variant="streak" />
         <Stat label="Retrievals, lifetime" value={streak.lifetimeRetrievals.toLocaleString()} />
         <div className="row" style={{ marginBlockStart: 'var(--s-4)' }}>
           <button className="grow ghost" onClick={() => void state.markRestDay(now, !today?.restDay)}>
             {today?.restDay ? 'Cancel rest day' : 'Take a rest day'}
           </button>
-          <Link to="/journal" className="grow">
-            <button className="full ghost">It worked today</button>
+          <Link to="/journal" className="btn full ghost grow">
+            It worked today
           </Link>
         </div>
       </div>
@@ -206,8 +206,8 @@ export default function Today() {
           title="Nothing here yet"
           body="Start with the baseline so the app knows which stage of the problem is actually yours — it changes what you train first."
           action={
-            <Link to="/baseline">
-              <button className="primary">Run the baseline</button>
+            <Link to="/baseline" className="btn primary">
+              Run the baseline
             </Link>
           }
         />

@@ -173,12 +173,25 @@ export function adherenceByBeat(
  * H1 from the engagement hypotheses: is the pre-sleep slot actually the strongest habit anchor?
  * Shipped as a local self-experiment rather than an assumption.
  */
-export function preSleepCompliance(days: DayRecord[]): { withReview: number | null; withoutReview: number | null; n: number } {
+export function preSleepCompliance(days: DayRecord[]): {
+  withReview: number | null
+  withReviewN: number
+  withoutReview: number | null
+  withoutReviewN: number
+} {
   const done = days.filter((d) => d.preSleepReviewDone)
   const not = days.filter((d) => !d.preSleepReviewDone)
   const rate = (rows: DayRecord[]) =>
     rows.length === 0
       ? null
       : rows.reduce((s, d) => s + (d.retrievalsDue === 0 ? 1 : d.retrievalsDone / d.retrievalsDue), 0) / rows.length
-  return { withReview: rate(done), withoutReview: rate(not), n: days.length }
+  // Each arm carries its own count. Reporting the total day count beside both figures stated a
+  // sample size that was not the sample size of the number next to it — the precise failure the
+  // rail exists to prevent.
+  return {
+    withReview: rate(done),
+    withReviewN: done.length,
+    withoutReview: rate(not),
+    withoutReviewN: not.length,
+  }
 }

@@ -85,8 +85,11 @@ export function successRate(attempts: Attempt[]): { rate: number | null; n: numb
  */
 export function dividedAttentionGap(attempts: Attempt[]): {
   focused: number | null
+  focusedN: number
   divided: number | null
+  dividedN: number
   gapPoints: number | null
+  /** @deprecated Ambiguous — use `dividedN`. Retained so existing callers keep compiling. */
   n: number
 } {
   const focused = successRate(attempts.filter((a) => !a.dividedAttention))
@@ -95,5 +98,15 @@ export function dividedAttentionGap(attempts: Attempt[]): {
   // from eight divided-attention trials is noise wearing a number's clothes.
   const usable = focused.rate !== null && divided.rate !== null && divided.n >= MIN_N && focused.n >= MIN_N
   const gapPoints = usable ? (focused.rate! - divided.rate!) * 100 : null
-  return { focused: focused.rate, divided: divided.rate, gapPoints, n: divided.n }
+  // Both arms report their own sample size. Returning only the divided arm's `n` let the
+  // *flattering* row — undistracted recall — escape the honesty rail while the unflattering one
+  // was held to it, on the one screen whose stated job is to be less flattering than the user is.
+  return {
+    focused: focused.rate,
+    focusedN: focused.n,
+    divided: divided.rate,
+    dividedN: divided.n,
+    gapPoints,
+    n: divided.n,
+  }
 }

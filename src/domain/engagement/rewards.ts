@@ -31,7 +31,10 @@ export function rewardsForAttempt(ctx: RewardContext): RewardEvent[] {
   const events: RewardEvent[] = []
   if (attempt.grade === 'MISS') return events
 
-  const name = person?.displayName ?? 'this name'
+  // The person's name is deliberately NOT interpolated into these strings. It travels as
+  // `subjectId`, so the view can set it in the typeface reserved for people — a name baked into a
+  // sentence here would render in the sans like any other word.
+  void person
 
   // RESCUE — the item had drifted into genuine decay risk and you still produced the name.
   if (attempt.wasRescue) {
@@ -39,7 +42,7 @@ export function rewardsForAttempt(ctx: RewardContext): RewardEvent[] {
       kind: 'RESCUE',
       at: attempt.at,
       headline: 'Rescued',
-      detail: `${name} was slipping — overdue and heading for a lapse. You still had it.`,
+      detail: 'Slipping — overdue and heading for a lapse. You still had it.',
       subjectId: attempt.subjectId,
     })
   }
@@ -52,7 +55,7 @@ export function rewardsForAttempt(ctx: RewardContext): RewardEvent[] {
       kind: 'DURABILITY_RECORD',
       at: attempt.at,
       headline: `Held for ${formatInterval(intervalCleared)}`,
-      detail: `Your longest gap yet for ${name}. Next check is further out again.`,
+      detail: 'Your longest gap yet for them. The next check is further out again.',
       subjectId: attempt.subjectId,
     })
   }

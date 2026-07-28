@@ -4,6 +4,7 @@ import { selectPlan, useStore } from '../state/store'
 import { timeOfDay } from '../domain/program/dailyPlan'
 import { useNow } from './hooks'
 import { IconCapture, IconInsights, IconPeople, IconProgram, IconToday } from './icons'
+import Onboarding from './screens/Onboarding'
 import Today from './screens/Today'
 import Capture from './screens/Capture'
 import Session from './screens/Session'
@@ -28,6 +29,7 @@ export default function App() {
   const loaded = useStore((s) => s.loaded)
   const load = useStore((s) => s.load)
   const settings = useStore((s) => s.settings)
+  const firstRun = useStore((s) => s.people.length === 0 && s.assessments.length === 0)
   const now = useNow(60_000)
   const location = useLocation()
 
@@ -64,7 +66,13 @@ export default function App() {
     <>
       <div className="app">
         <Routes location={location}>
-          <Route path="/" element={<Navigate to="/today" replace />} />
+          {/* A first run has no people and no baseline, so the app opens on the claim it makes
+              about itself — including the parts it says are not achievable. */}
+          <Route
+            path="/"
+            element={<Navigate to={firstRun ? '/onboarding' : '/today'} replace />}
+          />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/today" element={<Today />} />
           <Route path="/capture" element={<Capture />} />
           <Route path="/session" element={<Session />} />
@@ -80,6 +88,7 @@ export default function App() {
         <div className="page-end" />
       </div>
 
+      {location.pathname !== '/onboarding' && (
       <nav className="nav" aria-label="Sections">
         {TABS.map(({ to, Icon, label }) => (
           <NavLink
@@ -101,6 +110,7 @@ export default function App() {
           </NavLink>
         ))}
       </nav>
+      )}
     </>
   )
 }

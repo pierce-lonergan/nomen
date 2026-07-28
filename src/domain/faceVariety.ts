@@ -17,7 +17,10 @@ export type FaceConfidence = 'PHOTO_ONLY' | 'FAMILIAR' | 'ROBUST'
 export const FACE_CONFIDENCE_COPY: Record<FaceConfidence, string> = {
   PHOTO_ONLY: 'You know a picture, not a face — add a look from another day.',
   FAMILIAR: 'Seen across more than one occasion. Real face learning has started.',
-  ROBUST: 'Learned across varied appearances — this should survive a haircut.',
+  // States the measurement, not a prediction. The evidence supports that within-person variability
+  // is necessary for face learning; it does not support a robustness guarantee off three
+  // photographs — and this app has no "learned" state to assert in the first place.
+  ROBUST: 'Learned across three separate occasions — the variety that actually transfers. Keep adding looks; nothing here is permanent.',
 }
 
 export function distinctImageEncounters(person: Person, media: MediaRef[]): number {

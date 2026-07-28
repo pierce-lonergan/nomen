@@ -1,7 +1,22 @@
 import type { FaceParams } from '../lib/stimuli'
 
-/** A procedurally drawn face for the assessment battery. Deterministic from its parameters. */
-export function SyntheticFace({ params, size = 120 }: { params: FaceParams; size?: number }) {
+/**
+ * A procedurally drawn face for the assessment battery. Deterministic from its parameters.
+ *
+ * Defaults to `aria-hidden`, because these are almost always nested inside a labelled control and
+ * a generic "face" label would override the button's own accessible name — which is what made the
+ * four-option individuation trial announce as "face, button" four times over.
+ */
+export function SyntheticFace({
+  params,
+  size = 120,
+  label,
+}: {
+  params: FaceParams
+  size?: number
+  /** Supply only when the face stands alone and needs a name of its own. */
+  label?: string
+}) {
   const s = 100
   const skin = `hsl(${params.hue}, 34%, 68%)`
   const shadow = `hsl(${params.hue}, 30%, 54%)`
@@ -12,7 +27,12 @@ export function SyntheticFace({ params, size = 120 }: { params: FaceParams; size
   const eyeR = s * params.eyeSize
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${s} ${s}`} role="img" aria-label="face">
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${s} ${s}`}
+      {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true, focusable: false })}
+    >
       <rect width={s} height={s} rx="10" fill="#241f1b" />
       <ellipse cx={cx} cy={s * 0.52} rx={s * 0.3 * params.jaw} ry={s * 0.36} fill={skin} />
       <path

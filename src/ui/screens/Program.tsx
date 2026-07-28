@@ -1,11 +1,55 @@
 import { Link } from 'react-router-dom'
 import { selectGate, selectSnapshot, useStore } from '../../state/store'
-import { capabilityStatement, PHASE_NAMES, PHASE_PURPOSE } from '../../domain/program/gates'
+import {
+  capabilityStatement,
+  PHASE_NAMES,
+  PHASE_PURPOSE,
+  type Criterion,
+} from '../../domain/program/gates'
 import { DRILLS, drillsAvailable, nextUnlock } from '../../domain/drills/registry'
 import { computeVerdict } from '../../domain/assessment/verdict'
 import { calendarDaysBetween } from '../../domain/time'
 import { useNow } from '../hooks'
-import { Evidence, Header } from '../components'
+import { Evidence, Header, Stat } from '../components'
+
+/**
+ * The year, as a specification rather than a ladder.
+ *
+ * Two things are load-bearing here:
+ *
+ * - **A locked drill is not a dimmed prize.** The old cards ran at `opacity: 0.55`, which took
+ *   their text to roughly 1.6:1 — unreadable, and a lie about what a gate is. A gate is a
+ *   published criterion, so a locked drill reads at `--ink-2` and carries the phase it opens at.
+ *   Never reintroduce the opacity.
+ * - **The capability statement is the one typographic celebration in the application.** The
+ *   three-line terracotta initial fires only on a gate the user has actually met, which works out
+ *   at once every 6–12 weeks. Its rarity *is* the reward — using `.capability` a second time
+ *   anywhere deletes the first.
+ */
+
+/**
+ * The gate criteria arrive from the domain as display strings — `82% (n=24)`, `13 points behind`,
+ * `4/4`. The honesty rail wants those in three separate slots (figure, unit, n), so the split
+ * happens here, in the view, rather than in `gates.ts`, where the thresholds live and display is
+ * not the job. Anything that does not match falls through whole into the figure slot.
+ */
+function readCriterion(c: Criterion): {
+  value: string
+  unit?: string
+  n?: number
+  needs?: number
+} {
+  const withN = /^(.*?)\s*\(n=(\d+)\)$/.exec(c.actual)
+  const body = withN ? withN[1] : c.actual
+  const split = /^([\d.]+(?:%|\/\d+)?)\s+(.+)$/.exec(body)
+  const needs = /n≥(\d+)/.exec(c.required)
+  return {
+    value: split ? split[1] : body,
+    unit: split ? ` ${split[2]}` : undefined,
+    n: withN ? Number(withN[2]) : undefined,
+    needs: needs ? Number(needs[1]) : undefined,
+  }
+}
 
 export default function Program() {
   const state = useStore()
@@ -21,13 +65,15 @@ export default function Program() {
   return (
     <>
       <Header title={`Phase ${phase} — ${PHASE_NAMES[phase]}`} sub={PHASE_PURPOSE[phase]} />
-      <p className="dim">{daysIn} days in this phase.</p>
+      <p className="dim">
+        <span className="fig">{daysIn}</span> days in this phase.
+      </p>
 
       {verdict && (
         <div className="card accent">
           <h3>{verdict.headline}</h3>
           <p className="small muted">{verdict.reasoning}</p>
-          <ul className="small" style={{ paddingLeft: 18, margin: '8px 0' }}>
+          <ul className="small muted" style={{ margin: '0 0 var(--s-3)', paddingInlineStart: 'var(--s-5)' }}>
             {verdict.emphasis.map((e) => (
               <li key={e}>{e}</li>
             ))}
@@ -43,98 +89,125 @@ export default function Program() {
       <h2>Gate to the next phase</h2>
       <div className="card">
         {gate.criteria.length === 0 ? (
-          <p className="small muted">
+          <p className="muted">
             Phase 4 does not complete. Unrehearsed names decay by design, so maintenance is a
             permanent part of the practice rather than a stage you finish.
           </p>
         ) : (
           <>
-            {gate.criteria.map((c) => (
-              <div key={c.id} className="stat">
-                <div>
-                  <div className="small">{c.label}</div>
-                  <div className="dim">needs {c.required}</div>
+            {/* The status word leads the row like a kicker, so the criterion below it keeps the
+                stat grid's two honest columns: the claim on the left, the measurement on the
+                right. `met` / `not yet` / `no data` is a border and a word — never a fill. */}
+            {gate.criteria.map((c) => {
+              const read = readCriterion(c)
+              return (
+                <div key={c.id} className="row-rule">
+                  <div style={{ paddingBlockStart: 'var(--s-3)' }}>
+                    <span className={c.met ? 'pill good' : 'pill'}>
+                      {c.met ? 'met' : c.insufficient ? 'no data' : 'not yet'}
+                    </span>
+                  </div>
+                  <Stat
+                    label={c.label}
+                    hint={`needs ${c.required}`}
+                    value={read.value}
+                    unit={read.unit}
+                    n={read.n}
+                    needs={read.needs}
+                    insufficient={c.insufficient}
+                  />
                 </div>
-                <div className={`stat-value${c.insufficient ? ' insufficient' : ''}`}>
-                  <span className={c.met ? 'pill good' : 'pill'}>{c.met ? 'met' : c.insufficient ? 'no data' : 'not yet'}</span>
-                  <div className="dim">{c.actual}</div>
-                </div>
-              </div>
-            ))}
+              )
+            })}
             <div className="spacer" />
             <button className="primary full" disabled={!gate.canAdvance} onClick={() => void state.advancePhase(now)}>
-              {gate.canAdvance ? `Advance to phase ${gate.nextPhase}` : 'Criteria not met yet'}
+              {gate.canAdvance ? (
+                <>
+                  Advance to phase <span className="fig">{gate.nextPhase}</span>
+                </>
+              ) : (
+                'Criteria not met yet'
+              )}
             </button>
-            <div className="dim" style={{ marginTop: 8 }}>
-              Phases advance on measurements, not on the calendar — with one deliberate exception, the
-              45-day floor in phase 1, because habit automaticity takes roughly two months and
-              enthusiasm is not a substitute for it.
-            </div>
+            <p className="record-note">
+              Phases advance on measurements, not on the calendar — with one deliberate exception,
+              the <span className="fig">45</span>-day floor in phase{' '}
+              <span className="fig">1</span>, because habit automaticity takes roughly two months
+              and enthusiasm is not a substitute for it.
+            </p>
           </>
         )}
       </div>
 
       <h2>Where you actually are</h2>
-      <div className="card">
-        <p className="small">{capabilityStatement(snapshot)}</p>
-      </div>
+      {/* The signature moment. The drop cap is earned by a met gate and by nothing else. */}
+      {gate.canAdvance ? (
+        <p className="capability">{capabilityStatement(snapshot)}</p>
+      ) : (
+        <p>{capabilityStatement(snapshot)}</p>
+      )}
 
       <h2>Drills</h2>
       {unlocked.map((d) => (
-        <div key={d.id} className="card tight">
+        <section key={d.id} className="row-rule" style={{ paddingBlockEnd: 'var(--s-5)', marginBlockEnd: 'var(--s-5)' }}>
           <div className="row between">
-            <strong>{d.name}</strong>
+            <h3 style={{ margin: 0 }}>{d.name}</h3>
             <span className="pill good">unlocked</span>
           </div>
-          <div className="small muted" style={{ marginTop: 4 }}>
+          <p className="muted" style={{ margin: 'var(--s-2) 0 0' }}>
             {d.purpose}
-          </div>
+          </p>
           <Evidence>{d.mechanism}</Evidence>
-        </div>
+        </section>
       ))}
+      {/* A gate is a specification, not a dimmed prize: full contrast, and the phase that opens
+          it stated in a pill. There is no opacity on this row and there must never be. */}
       {DRILLS.filter((d) => d.minPhase > phase).map((d) => (
-        <div key={d.id} className="card tight" style={{ opacity: 0.55 }}>
+        <section key={d.id} className="row-rule" style={{ paddingBlockEnd: 'var(--s-4)', marginBlockEnd: 'var(--s-4)' }}>
           <div className="row between">
-            <strong>{d.name}</strong>
+            <h3 style={{ margin: 0 }}>{d.name}</h3>
             <span className="pill">phase {d.minPhase}</span>
           </div>
-          <div className="small muted" style={{ marginTop: 4 }}>
+          <p className="muted" style={{ margin: 'var(--s-2) 0 0' }}>
             {d.purpose}
-          </div>
-        </div>
+          </p>
+        </section>
       ))}
       {upcoming && (
-        <p className="dim center">
-          Next unlock: {upcoming.name}, at phase {upcoming.minPhase}.
+        <p className="record-note">
+          Next unlock: {upcoming.name}, at phase <span className="fig">{upcoming.minPhase}</span>.
         </p>
       )}
 
       <h2>The rest of the year</h2>
-      <div className="card">
-        {([0, 1, 2, 3, 4] as const).map((p) => (
-          <div key={p} className="stat">
-            <div>
-              <div className={p === phase ? '' : 'muted'}>
-                Phase {p} — {PHASE_NAMES[p]}
-              </div>
-              <div className="dim">{PHASE_PURPOSE[p]}</div>
-            </div>
+      {([0, 1, 2, 3, 4] as const).map((p) => (
+        <div key={p} className="row-rule" style={{ paddingBlock: 'var(--s-3)' }}>
+          <div className="row between">
+            <span>
+              Phase <span className="fig">{p}</span> — {PHASE_NAMES[p]}
+            </span>
             {p === phase && <span className="pill good">here</span>}
           </div>
-        ))}
-      </div>
+          <p className="dim" style={{ margin: 'var(--s-1) 0 0' }}>
+            {PHASE_PURPOSE[p]}
+          </p>
+        </div>
+      ))}
 
-      <div className="row">
-        <Link to="/baseline" className="grow">
-          <button className="full">Baseline & re-tests</button>
+      <div className="row" style={{ marginBlockStart: 'var(--s-5)' }}>
+        {/* `.btn` rather than a <button> inside the <a>: a control nested in a link is invalid
+            markup, and the anchor was already doing the work. No `.full` on the pair — it would
+            trip `.full + .full`'s stacking margin and knock the second one off the baseline. */}
+        <Link to="/baseline" className="btn grow">
+          Baseline &amp; re-tests
         </Link>
-        <Link to="/tracks" className="grow">
-          <button className="full">Cast & place tracks</button>
+        <Link to="/tracks" className="btn grow">
+          Cast &amp; place tracks
         </Link>
       </div>
       <div className="spacer" />
-      <Link to="/settings">
-        <button className="full ghost">Settings, privacy, and your data</button>
+      <Link to="/settings" className="btn full ghost">
+        Settings, privacy, and your data
       </Link>
     </>
   )

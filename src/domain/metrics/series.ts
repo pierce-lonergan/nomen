@@ -48,8 +48,10 @@ export function latencyCurve(attempts: Attempt[], bins = 12): SeriesPoint[] {
       x: start + block.length / 2,
       y: median(block),
       n: block.length,
-      // A block needs a few observations before its median means anything.
-      sparse: block.length < 3,
+      // The same threshold every other series uses. A block of three retrievals produced a median
+      // the chart was willing to join into a solid trend line, which is exactly the confident
+      // curve through too few observations this module exists not to draw.
+      sparse: block.length < MIN_N,
       label: `retrievals ${start + 1}–${start + block.length}`,
     })
   }

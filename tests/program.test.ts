@@ -108,6 +108,23 @@ describe('capability statement', () => {
   it('says nothing rather than something flattering when there is no data', () => {
     expect(capabilityStatement(snapshot({ recall: [] }))).toMatch(/Not enough data/)
   })
+
+  it('refuses to state a percentage from a handful of attempts', () => {
+    // This sentence is rendered with the app's one drop cap. Before the n gate, a single
+    // successful retrieval produced "You hold 100% of names past the end of the conversation".
+    const thin = capabilityStatement(snapshot({ recall: [stat('POST_CONVERSATION', 1, 1)] }))
+    expect(thin).toMatch(/Not enough data/)
+    expect(thin).not.toMatch(/100%/)
+  })
+
+  it('carries the sample size in every clause it does state', () => {
+    const text = capabilityStatement(
+      snapshot({ recall: [stat('POST_CONVERSATION', 0.8, 40), stat('ONE_WEEK', 0.6, 5)] }),
+    )
+    expect(text).toMatch(/80% of names past the end of the conversation \(n=40\)/)
+    // The one-week bucket is below MIN_N, so it contributes nothing rather than a bare figure.
+    expect(text).not.toMatch(/60%/)
+  })
 })
 
 describe('baseline verdict routing', () => {

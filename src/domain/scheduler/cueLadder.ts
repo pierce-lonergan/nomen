@@ -36,6 +36,13 @@ export function preAttemptCue(item: ScheduleItem): CueLevel {
 export interface CueContent {
   level: CueLevel
   text: string
+  /**
+   * The name itself, kept OUT of `text` so the view can set it in the typeface reserved for
+   * people. Baking it into the prose ("The name is Sarah") forced the restudy cue to render a
+   * human name in the same sans as the surrounding chrome — three lines above a reveal that sets
+   * the identical string in the serif at display size.
+   */
+  name?: string
   choices?: string[]
 }
 
@@ -84,7 +91,7 @@ export function buildCue(
       return { level, text: 'Which one?', choices: shuffleStable([name, ...pool], name) }
     }
     case 'RESTUDY':
-      return { level, text: `The name is ${name}` }
+      return { level, text: 'The name is', name }
   }
 }
 

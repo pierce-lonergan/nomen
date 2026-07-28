@@ -5,7 +5,7 @@ import { needsMoreLooks, varietyCoverage } from '../../domain/faceVariety'
 import { formatInterval } from '../../domain/time'
 import { MIN_N } from '../../domain/metrics/recall'
 import { useNow } from '../hooks'
-import { Avatar, Bar, Empty, Header, PersonName } from '../components'
+import { Avatar, Bar, Chips, Empty, Header, PersonName } from '../components'
 
 /**
  * The roster.
@@ -53,25 +53,17 @@ export default function People() {
         </p>
       </div>
 
-      <div className="chips" role="radiogroup" aria-label="Filter" style={{ margin: 'var(--s-5) 0 var(--s-4)' }}>
-        {(
-          [
-            ['ACTIVE', 'In rotation'],
-            ['ROSTER', 'Roster'],
-            ['ATTENTION', 'Needs attention'],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={filter === value}
-            className={`chip${filter === value ? ' on' : ''}`}
-            onClick={() => setFilter(value)}
-          >
-            {label}
-          </button>
-        ))}
+      <div style={{ margin: 'var(--s-5) 0 var(--s-4)' }}>
+        <Chips
+          label="Filter"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'ACTIVE', label: 'In rotation' },
+            { value: 'ROSTER', label: 'Roster' },
+            { value: 'ATTENTION', label: 'Needs attention' },
+          ]}
+        />
       </div>
 
       {shown.length === 0 ? (
@@ -83,8 +75,8 @@ export default function People() {
               : 'Capture someone and they will appear here.'
           }
           action={
-            <Link to="/capture">
-              <button className="primary">Capture someone</button>
+            <Link to="/capture" className="btn primary">
+              Capture someone
             </Link>
           }
         />

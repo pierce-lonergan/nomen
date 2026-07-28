@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { selectPlan, useStore } from '../../state/store'
 import type { CueLevel, Grade, Person, ScheduleItem } from '../../domain/types'
-import { INSTANT_THRESHOLD_MS } from '../../domain/types'
+import { INSTANT_THRESHOLD_MS, isHuman } from '../../domain/types'
 import { buildCue, easeCue } from '../../domain/scheduler/cueLadder'
 import { competenceFeedback } from '../../domain/engagement/rewards'
 import { nextDrillImage } from '../../domain/faceVariety'
 import { currentIntervalLabel } from '../../domain/scheduler/schedule'
 import { useNow, useTicker } from '../hooks'
-import { Empty, Evidence, Header } from '../components'
+import { Empty, Evidence, Header, PersonName } from '../components'
 
 /**
  * The session loop — and the reveal, which is the emotional core of the application.
@@ -76,6 +76,7 @@ export default function Session() {
   if (!item || !person) {
     return (
       <>
+        <QueueCleared />
         <Header title="Session" back="/today" />
         {lastFeedback && <p className="held">{lastFeedback}</p>}
         <Empty
@@ -97,10 +98,21 @@ export default function Session() {
     )
   }
 
+  // Foils must be the same KIND of thing, or the four-choice cue is not a test. Offering
+  // "Trondheim / Sarah / Priya / Marcus" gives the answer away by category alone; so does mixing
+  // two novels' casts. Same track and collection first, falling back to same track.
+  const sameCollection = state.people.filter(
+    (p) => p.id !== person.id && p.track === person.track && p.collection === person.collection,
+  )
+  const sameTrack = state.people.filter((p) => p.id !== person.id && p.track === person.track)
+  const foils = (sameCollection.length >= 3 ? sameCollection : sameTrack).map((p) => p.givenName)
+
+  const nameFace = isHuman(person.track) ? 'person-name' : ''
+
   const cue = buildCue(cueLevel, person.givenName, {
     context: person.context,
     phonetic: person.phonetic,
-    distractors: state.people.filter((p) => p.id !== person.id).map((p) => p.givenName),
+    distractors: foils,
   })
 
   async function grade(g: Grade) {
@@ -114,15 +126,29 @@ export default function Session() {
 
   return (
     <>
+      {/* The visible register carries the mode, so the h1 is for orientation only — but a page
+          with no level-one heading is a page a screen-reader user cannot orient in. */}
+      <h1 className="sr-only">Retrieval session</h1>
+
       {state.pendingRewards.length > 0 && (
         <div>
-          {state.pendingRewards.map((r, i) => (
-            <div key={`${r.kind}-${i}`} className="reward">
-              <span className="reward__kicker">{r.kind.replace('_', ' ')}</span>
-              <p className="reward__headline">{r.headline}</p>
-              <p className="reward__detail">{r.detail}</p>
-            </div>
-          ))}
+          {state.pendingRewards.map((r, i) => {
+            const subject = state.people.find((p) => p.id === r.subjectId)
+            return (
+              <div key={`${r.kind}-${i}`} className="reward">
+                <span className="reward__kicker">{r.kind.replace('_', ' ')}</span>
+                <p className="reward__headline">{r.headline}</p>
+                <p className="reward__detail">
+                  {subject && (
+                    <>
+                      <PersonName person={subject} />{' '}
+                    </>
+                  )}
+                  {r.detail}
+                </p>
+              </div>
+            )
+          })}
           <button className="ghost small" onClick={() => state.clearRewards()}>
             Dismiss
           </button>
@@ -144,11 +170,19 @@ export default function Session() {
         {cueLevel !== 'FREE' && cue.text && (
           <div>
             <span className="retrieval__mode">cue</span>
-            <p style={{ margin: 'var(--s-1) 0 0' }}>{cue.text}</p>
+            <p style={{ margin: 'var(--s-1) 0 0' }}>
+              {cue.text}
+              {cue.name && (
+                <>
+                  {' '}
+                  <span className={nameFace}>{cue.name}</span>
+                </>
+              )}
+            </p>
             {cue.choices && (
               <div className="chips" style={{ marginBlockStart: 'var(--s-2)' }}>
                 {cue.choices.map((c) => (
-                  <span key={c} className="chip">
+                  <span key={c} className={`chip ${nameFace}`.trim()}>
                     {c}
                   </span>
                 ))}
@@ -167,7 +201,12 @@ export default function Session() {
               {revealed && (
                 <>
                   {item.mode === 'NAME_TO_FACE' && image ? (
-                    <img className="face" src={image.src} alt="" />
+                    <>
+                      <img className="face" src={image.src} alt="" />
+                      {/* The image IS the answer here, and alt="" leaves the live region with
+                          nothing to announce. The name is the non-visual equivalent. */}
+                      <p className="sr-only">{person.displayName}</p>
+                    </>
                   ) : (
                     <p className="answer__name">{person.displayName}</p>
                   )}
@@ -238,6 +277,28 @@ export default function Session() {
 }
 
 /**
+ * Records that the pre-sleep consolidation review actually happened.
+ *
+ * Without this the flag was only ever set by the demo generator, so H1 — the app's own shipped
+ * self-experiment about whether the pre-sleep slot is the strongest habit anchor — could never
+ * accumulate a with-review arm, and the Evidence note promising the loop's assumptions are
+ * "testable on your data" was writing a cheque the app could not cash.
+ */
+function QueueCleared() {
+  const state = useStore()
+  const now = useNow(60_000)
+  const plan = selectPlan(state, now)
+  const alreadyLogged = state.days.find((d) => d.day === plan.day)?.preSleepReviewDone
+
+  useEffect(() => {
+    if (plan.timeOfDay === 'PRE_SLEEP' && !alreadyLogged) void state.markPreSleepDone(Date.now())
+    // Fires once per evening, when the queue is genuinely clear in the consolidation window.
+  }, [plan.timeOfDay, alreadyLogged])
+
+  return null
+}
+
+/**
  * The prompt.
  *
  * The serif is reserved to human beings, so a `NAME_TO_FACE` or `CAST_RECALL` prompt is set in it
@@ -265,14 +326,19 @@ function Prompt({
     )
   }
 
-  const isHuman = person.track === 'PERSON' || person.track === 'CAST'
+  // Branch on the CONTENT, not only on the track. A cast prompt shows the character's *role*
+  // ("the sister who runs the press"), and a role is not a name — it must not wear the face
+  // reserved for people, even though the subject behind it is a person.
+  const text =
+    item.mode === 'NAME_TO_FACE' ? person.displayName : (person.role ?? person.context ?? person.displayName)
+  const showingName = text === person.displayName
+  const asName = isHuman(person.track) && showingName
+
   return (
     <div>
       {person.collection && <p className="retrieval__collection">{person.collection}</p>}
-      <p
-        className={`retrieval__prompt-text${isHuman ? ' person-name' : ' retrieval__prompt-text--label'}`}
-      >
-        {item.mode === 'NAME_TO_FACE' ? person.displayName : (person.role ?? person.context ?? person.displayName)}
+      <p className={`retrieval__prompt-text${asName ? ' person-name' : ' retrieval__prompt-text--label'}`}>
+        {text}
       </p>
     </div>
   )

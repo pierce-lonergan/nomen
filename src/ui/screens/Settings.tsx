@@ -1,12 +1,63 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { useStore } from '../../state/store'
 import { exportAll, wipeAll, type ExportBundle } from '../../data/db'
 import { seedDemoData } from '../../data/seed'
-import { Evidence, Header } from '../components'
+import type { Settings } from '../../domain/types'
+import { Chips, Evidence, Header } from '../components'
+import { IconMoon, IconSun } from '../icons'
+import { useTheme, type ThemeChoice } from '../theme'
+
+/**
+ * Settings — the schedule, the data, and the charter.
+ *
+ * Two things on this screen are load-bearing beyond their function:
+ *
+ * - **The erase confirmation** is the only place in the application where a destructive colour
+ *   appears, and on confirm it inverts to a solid ink block rather than turning redder. A
+ *   destructive action should read as *heavy*, not as *alarming*.
+ * - **The charter** is set as prose at body size behind a strong rule, not as fine print. It is
+ *   the product's argument about itself; typesetting it small would be the first thing it
+ *   promises not to do.
+ *
+ * The plate at the foot is a standing, factual restatement of the privacy invariant, with the real
+ * counts beside it. It is the app's visible bottom edge — the structural opposite of a feed.
+ */
+
+const THEMES: { value: ThemeChoice; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+]
+
+const SCHEDULE_MODES: { value: Settings['scheduleMode']; label: string }[] = [
+  { value: 'expanding', label: 'Expanding' },
+  { value: 'uniform', label: 'Uniform' },
+]
+
+/** Body size, --ink-2, one strong left rule, and room to breathe. A charter, not a footnote. */
+const CHARTER: CSSProperties = {
+  display: 'grid',
+  rowGap: 'var(--s-4)',
+  margin: 0,
+  paddingInlineStart: 'var(--s-5)',
+  borderInlineStart: '2px solid var(--line-strong)',
+  listStyle: 'none',
+  maxInlineSize: 'var(--measure)',
+  fontSize: 'var(--t-body)',
+  lineHeight: 'var(--lh-body)',
+  color: 'var(--ink-2)',
+}
+
+const RESOLVED_LINE: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--s-2)',
+}
 
 export default function SettingsScreen() {
   const state = useStore()
   const s = state.settings
+  const [theme, setTheme, resolved] = useTheme()
   const [confirmWipe, setConfirmWipe] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
 
@@ -25,26 +76,32 @@ export default function SettingsScreen() {
     <>
       <Header title="Settings" back="/program" />
 
+      <h2>Appearance</h2>
+      <div className="card">
+        <div className="field" style={{ marginBlockEnd: 0 }}>
+          <label>Theme</label>
+          <Chips options={THEMES} value={theme} onChange={setTheme} label="Theme" />
+          <p className="dim" style={RESOLVED_LINE}>
+            {resolved === 'dark' ? <IconMoon /> : <IconSun />}
+            <span>Currently {resolved}</span>
+          </p>
+          <p className="dim">
+            Dark is the design’s home key — the pre-sleep review happens in a dark room. Capture
+            happens mid-conversation in daylight, so light is a first-class theme, not a courtesy.
+          </p>
+        </div>
+      </div>
+
       <h2>Schedule</h2>
       <div className="card">
         <div className="field">
           <label>Interval shape</label>
-          <div className="chips">
-            {(
-              [
-                ['expanding', 'Expanding'],
-                ['uniform', 'Uniform'],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                className={`chip${s.scheduleMode === value ? ' on' : ''}`}
-                onClick={() => void state.updateSettings({ scheduleMode: value })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Chips
+            options={SCHEDULE_MODES}
+            value={s.scheduleMode}
+            onChange={(v) => void state.updateSettings({ scheduleMode: v })}
+            label="Interval shape"
+          />
           <Evidence>
             This is a real setting rather than a hidden flag because the question is genuinely
             unresolved: a 2020 meta-analysis found essentially no overall difference between
@@ -55,7 +112,9 @@ export default function SettingsScreen() {
         </div>
 
         <div className="field">
-          <label htmlFor="intake">New people per day: {s.intakeCapPerDay}</label>
+          <label htmlFor="intake">
+            New people per day: <span className="fig">{s.intakeCapPerDay}</span>
+          </label>
           <input
             id="intake"
             type="range"
@@ -64,14 +123,16 @@ export default function SettingsScreen() {
             value={s.intakeCapPerDay}
             onChange={(e) => void state.updateSettings({ intakeCapPerDay: +e.target.value })}
           />
-          <div className="dim">
+          <p className="dim">
             The most important number in the app. Uncapped intake is how spaced-repetition tools kill
             themselves: a flood week becomes a wall, and the wall is where people quit.
-          </div>
+          </p>
         </div>
 
         <div className="field">
-          <label htmlFor="ceiling">Retrievals per day: {s.dailyRetrievalCeiling}</label>
+          <label htmlFor="ceiling">
+            Retrievals per day: <span className="fig">{s.dailyRetrievalCeiling}</span>
+          </label>
           <input
             id="ceiling"
             type="range"
@@ -82,8 +143,10 @@ export default function SettingsScreen() {
           />
         </div>
 
-        <div className="field">
-          <label htmlFor="presleep">Pre-sleep review at {s.preSleepHour}:00</label>
+        <div className="field" style={{ marginBlockEnd: 0 }}>
+          <label htmlFor="presleep">
+            Pre-sleep review at <span className="fig">{s.preSleepHour}:00</span>
+          </label>
           <input
             id="presleep"
             type="range"
@@ -92,52 +155,51 @@ export default function SettingsScreen() {
             value={s.preSleepHour}
             onChange={(e) => void state.updateSettings({ preSleepHour: +e.target.value })}
           />
-          <div className="dim">
+          <p className="dim">
             Declarative memories consolidate during deep sleep, so the last review before bed gets
             the most out of the night. It is also the steadiest anchor in most people’s day.
-          </div>
+          </p>
         </div>
       </div>
 
       <h2>Your data</h2>
       <div className="card">
-        <p className="small muted">
+        <p className="muted">
           Everything lives in this browser’s local database. There is no account, no server, and no
           code path in this app that sends a photograph or a note anywhere. That is a structural
           decision, not a policy promise — the database is full of other people’s faces, and they
           never agreed to be uploaded to anything.
         </p>
-        <button className="full" onClick={() => void doExport()}>
+        <button className="primary full" onClick={() => void doExport()}>
           Export everything as JSON
         </button>
-        <div className="spacer" />
-        <label htmlFor="import" className="small">
-          Import a previous export
-        </label>
-        <input
-          id="import"
-          type="file"
-          accept="application/json"
-          onChange={async (e) => {
-            const file = e.target.files?.[0]
-            if (!file) return
-            setBusy('Importing…')
-            const bundle = JSON.parse(await file.text()) as ExportBundle
-            await state.replaceAll(bundle)
-            setBusy(null)
-          }}
-        />
+        <div className="field" style={{ marginBlockStart: 'var(--s-5)', marginBlockEnd: 0 }}>
+          <label htmlFor="import">Import a previous export</label>
+          <input
+            id="import"
+            type="file"
+            accept="application/json"
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              setBusy('Importing…')
+              const bundle = JSON.parse(await file.text()) as ExportBundle
+              await state.replaceAll(bundle)
+              setBusy(null)
+            }}
+          />
+        </div>
       </div>
 
       <h2>Demo data</h2>
       <div className="card">
-        <p className="small muted">
+        <p className="dim">
           Generates a simulated eight months of practice — people, encounters, schedules, and a
           realistic attempt history — so the Insights and Program screens have something to show.
           Clearly fictional, and safe to wipe.
         </p>
         <button
-          className="full"
+          className="full ghost"
           disabled={busy !== null}
           onClick={async () => {
             setBusy('Generating…')
@@ -156,6 +218,7 @@ export default function SettingsScreen() {
           <div className="row">
             <button
               className="danger grow"
+              data-confirm="true"
               onClick={async () => {
                 await wipeAll()
                 await state.load()
@@ -164,29 +227,32 @@ export default function SettingsScreen() {
             >
               Erase everything permanently
             </button>
-            <button onClick={() => setConfirmWipe(false)}>Cancel</button>
+            <button className="ghost" onClick={() => setConfirmWipe(false)}>
+              Cancel
+            </button>
           </div>
         ) : (
           <button className="danger full" onClick={() => setConfirmWipe(true)}>
             Erase all data
           </button>
         )}
-        <div className="dim" style={{ marginTop: 8 }}>
-          Immediate and unrecoverable. Export first if you want a copy.
-        </div>
+        <p className="record-note">Immediate and unrecoverable. Export first if you want a copy.</p>
       </div>
 
       <h2>What this app will not do</h2>
-      <div className="card">
-        <ul className="small muted" style={{ paddingLeft: 18, margin: 0 }}>
-          <li>Claim you will remember names effortlessly, permanently, or universally.</li>
-          <li>Ship brain-training games — generic cognitive training does not transfer.</li>
-          <li>Coach imagery mnemonics during a live conversation, where they collapse.</li>
-          <li>Send you a notification you did not configure, or any between 22:00 and 07:00.</li>
-          <li>Use guilt, countdowns, or manufactured urgency to get you back.</li>
-          <li>Upload anything, ever.</li>
-        </ul>
-      </div>
+      <ul style={CHARTER}>
+        <li>Claim you will remember names effortlessly, permanently, or universally.</li>
+        <li>Ship brain-training games — generic cognitive training does not transfer.</li>
+        <li>Coach imagery mnemonics during a live conversation, where they collapse.</li>
+        <li>Send you a notification you did not configure, or any between 22:00 and 07:00.</li>
+        <li>Use guilt, countdowns, or manufactured urgency to get you back.</li>
+        <li>Upload anything, ever.</li>
+      </ul>
+
+      <p className="plate">
+        NOMEN v0.1.0 · LOCAL DB · NO NETWORK · {state.people.length.toLocaleString()} PEOPLE ·{' '}
+        {state.attempts.length.toLocaleString()} RETRIEVALS
+      </p>
     </>
   )
 }

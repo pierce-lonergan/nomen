@@ -288,8 +288,10 @@ function IndividuationTest({ onDone }: { onDone: (score: number, n: number) => v
         <div className="card">
           <Stat label="Matched" value={String(correct)} n={trials} />
           <p>
-            Below about two-thirds here means faces are the weak side of your binding — you cannot
-            attach a name to a face you did not encode distinctly, so face work comes first.
+            A low score here points at faces rather than names as your weak side — you cannot attach
+            a name to a face you did not encode distinctly, so face work would come first. These are
+            synthetic stimuli, though, so treat it as a route worth trying rather than a result.
+            Re-test monthly and compare like with like.
           </p>
         </div>
         <button className="primary full" onClick={() => onDone(correct / trials, trials)}>
@@ -314,6 +316,10 @@ function IndividuationTest({ onDone }: { onDone: (score: number, n: number) => v
           {options.map((name, i) => (
             <button
               key={`${name}-${i}`}
+              /* All four buttons contain only a face, and SyntheticFace labels itself "face" — so
+                 without this every option computed the same accessible name and the instrument was
+                 unusable non-visually. The label distinguishes them without leaking the answer. */
+              aria-label={`Option ${i + 1}`}
               style={{ padding: 'var(--s-1)' }}
               onClick={() => {
                 if (i === targetIdx) setCorrect((c) => c + 1)
