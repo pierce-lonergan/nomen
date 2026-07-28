@@ -132,11 +132,13 @@ export function streakCopy(s: StreakComputation): { headline: string; sub: strin
   if (s.freezesApplied.length > 0) {
     return {
       headline: `${s.current}-day streak`,
+      // The lifetime count appears here too: it is the number that does not reset, and the design
+      // law is that it is never absent from a screen showing a streak.
       sub: `A freeze covered ${s.freezesApplied.length === 1 ? 'a missed day' : `${s.freezesApplied.length} missed days`}. ${s.freezesHeld} left.`,
     }
   }
   return {
     headline: `${s.current}-day streak`,
-    sub: `${s.lifetimeRetrievals.toLocaleString()} retrievals · ${s.freezesHeld} freeze${s.freezesHeld === 1 ? '' : 's'} held`,
+    sub: `${s.freezesHeld} freeze${s.freezesHeld === 1 ? '' : 's'} held`,
   }
 }

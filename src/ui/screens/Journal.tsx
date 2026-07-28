@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { useStore } from '../../state/store'
 import type { Moment } from '../../domain/types'
-import { Empty, Evidence, Header } from '../components'
+import { Chips, Empty, Evidence, Header, PersonName } from '../components'
 
 /**
- * The Moment Journal.
+ * The Moment Journal — a dated ledger.
  *
  * The actual reward for this practice happens off-app: someone's face when you greet them by name
  * three weeks after meeting them once. The app cannot see that, so it asks.
  *
- * This is the most important screen at month nine, when the novelty is gone and the queue is a
- * chore. It is the evidence file, in the user's own words, that the year is paying for itself —
- * and it is the one reward in the app that is genuinely about relatedness rather than competence.
+ * This is the most important screen in the application at month nine, when the novelty is gone and
+ * the queue is a chore. So the user's own sentence gets the largest type on the page after a name,
+ * and the entries are set as rows on rules rather than in cards — a ledger reads as a record that
+ * accumulates, which is exactly what this is.
  */
 export default function Journal() {
   const state = useStore()
@@ -23,7 +24,11 @@ export default function Journal() {
 
   return (
     <>
-      <Header title="It worked" sub="When remembering a name actually mattered, write the line. Ten seconds now, worth a lot in November." back="/today" />
+      <Header
+        title="It worked"
+        sub="When remembering a name actually mattered, write the line. Ten seconds now, worth a lot in November."
+        back="/today"
+      />
 
       <div className="card">
         <div className="field">
@@ -47,22 +52,20 @@ export default function Journal() {
             ))}
           </select>
         </div>
-        <div className="chips">
-          {(
-            [
-              ['GOOD', 'Good'],
-              ['GREAT', 'Great'],
-              ['RELIEF', 'Relief'],
-            ] as const
-          ).map(([value, label]) => (
-            <button key={value} className={`chip${feeling === value ? ' on' : ''}`} onClick={() => setFeeling(value)}>
-              {label}
-            </button>
-          ))}
+        <div className="field">
+          <Chips
+            label="How it felt"
+            value={feeling}
+            onChange={setFeeling}
+            options={[
+              { value: 'GOOD', label: 'Good' },
+              { value: 'GREAT', label: 'Great' },
+              { value: 'RELIEF', label: 'Relief' },
+            ]}
+          />
         </div>
-        <div className="spacer" />
         <button
-          className="primary full"
+          className="primary full btn--lg"
           disabled={text.trim().length === 0}
           onClick={async () => {
             await state.logMoment(text.trim(), feeling, subjectId || undefined, Date.now())
@@ -74,23 +77,53 @@ export default function Journal() {
         </button>
       </div>
 
-      <h2>{moments.length} moments</h2>
+      <h2>
+        {moments.length} moment{moments.length === 1 ? '' : 's'}
+      </h2>
+
       {moments.length === 0 ? (
-        <Empty title="Nothing logged yet" body="The first one usually happens sooner than people expect — often in week two, at a second meeting." />
+        <Empty
+          title="Nothing logged yet"
+          body="The first one usually happens sooner than people expect — often in week two, at a second meeting."
+        />
       ) : (
-        moments.map((m) => {
-          const person = state.people.find((p) => p.id === m.subjectId)
-          return (
-            <div key={m.id} className="card tight">
-              <div className="row between">
-                <span className="dim">{new Date(m.at).toLocaleDateString()}</span>
-                <span className="pill">{m.feeling.toLowerCase()}</span>
-              </div>
-              <p style={{ margin: '6px 0 0' }}>{m.text}</p>
-              {person && <div className="dim">{person.displayName}</div>}
-            </div>
-          )
-        })
+        <div>
+          {moments.map((m) => {
+            const person = state.people.find((p) => p.id === m.subjectId)
+            return (
+              <article key={m.id} className="row-rule" style={{ paddingBlock: 'var(--s-5)' }}>
+                <div className="row between" style={{ marginBlockEnd: 'var(--s-2)' }}>
+                  <span className="retrieval__mode mono">
+                    {new Date(m.at).toLocaleDateString(undefined, {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </span>
+                  <span className="pill">{m.feeling.toLowerCase()}</span>
+                </div>
+                {/* The user's own words. The largest type on this page after a name — because at
+                    month nine this sentence is the evidence file that the year is paying off. */}
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 'var(--t-lede)',
+                    lineHeight: 'var(--lh-lede)',
+                    letterSpacing: 'var(--ls-lede)',
+                    color: 'var(--ink)',
+                  }}
+                >
+                  {m.text}
+                </p>
+                {person && (
+                  <p className="small" style={{ margin: 'var(--s-2) 0 0', color: 'var(--ink-2)' }}>
+                    <PersonName person={person} />
+                  </p>
+                )}
+              </article>
+            )
+          })}
+        </div>
       )}
 
       <Evidence>

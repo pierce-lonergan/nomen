@@ -1,0 +1,217 @@
+/*
+ * Nomen — design tokens.
+ *
+ * THE RULES THIS FILE ENFORCES, for anyone editing it later:
+ *
+ *  1. The accent marks POSITION AND STRUCTURE ONLY — the active tab, a section rule,
+ *     the rule under a revealed name, one primary action per screen. It never means
+ *     good, bad, due, overdue or urgent. There is no red badge and no filled counter
+ *     in this system: a number that needs attention is set larger, never redder.
+ *  2. No tinted fill anywhere carries state. A translucent accent at 8–14% measures
+ *     1.1–1.3:1 against its surface — invisible to a large fraction of users and to
+ *     everyone at low brightness. State is carried by a >=3:1 border plus a glyph
+ *     plus a word.
+ *  3. --bad-text is scoped to user-initiated destructive confirmation in Settings.
+ *     It is never used for a lapse, a miss, an overdue item, or insufficient data.
+ *     Insufficiency is neutral. A miss is the architecture working as designed and
+ *     colouring it red would be a lie the charter already forbids.
+ *  4. --hairline is DECORATIVE. It never bounds a control and never separates two
+ *     meaningfully different regions. Anything that must be seen uses --line (>=3:1
+ *     on every surface) or --line-strong.
+ *  5. The dark theme's --ink is deliberately NOT #FFF and lands near 14:1, not 16:1.
+ *     Light glyphs on dark bleed optically, and dark screens dilate the pupil, which
+ *     enlarges the blur circle. Past roughly 15:1 the gain is glare, not legibility.
+ *     Do not "improve" this by raising it.
+ *  6. The warm bias is a DESIGN PREFERENCE, not a sleep-protection claim. The
+ *     evidence map carries no such claim, and the charter binds the design's account
+ *     of itself as much as it binds the copy.
+ *
+ * Value syntax is constrained by the parser in scripts/check-contrast.mjs: flat
+ * declarations, one per line, hex / rgb() / rgba() / var() / color-mix(in oklab, …)
+ * only. No oklch(), hsl(), lab() or light-dark(). Derive in OKLCH if you like; ship hex.
+ */
+
+/* @tokens dark */
+:root {
+  --bg: #12100C;
+  --surface: #1C1814;
+  --surface-2: #292319;
+  --bg-nav: #161310;
+  --hairline: #2E2822;
+  --line: #7A7062;
+  --line-strong: #8A8072;
+  --ink: #E4DDD2;
+  --ink-2: #B5AC9F;
+  --ink-3: #968C7F;
+  --accent: #A24726;
+  --accent-edge: #E38C63;
+  --accent-text: #E38C63;
+  --on-accent: #FBF3EC;
+  --focus: #E38C63;
+  --viz-mark: #E38C63;
+  --viz-grid: #38312A;
+  --good-text: #95B37E;
+  --warn-text: #D2A65E;
+  --bad-text: #D48A79;
+  --tone-0: #B5AC9F;
+  --tone-1: #BCA08E;
+  --tone-2: #D09779;
+  --tone-3: #E38C63;
+  color-scheme: dark;
+}
+
+/* @tokens light */
+:root[data-theme='light'] {
+  --bg: #F4F1E9;
+  --surface: #FBF9F4;
+  --surface-2: #E9E4D8;
+  --bg-nav: #F7F5EE;
+  --hairline: #DFD9CA;
+  --line: #847A6B;
+  --line-strong: #6E6553;
+  --ink: #191510;
+  --ink-2: #484236;
+  --ink-3: #5E5749;
+  --accent: #A03A1C;
+  --accent-edge: #8A3218;
+  --accent-text: #A03A1C;
+  --on-accent: #FBF9F4;
+  --focus: #A03A1C;
+  --viz-mark: #A03A1C;
+  --viz-grid: #D8D1C0;
+  --good-text: #3C6130;
+  --warn-text: #78530F;
+  --bad-text: #8F3728;
+  --tone-0: #484236;
+  --tone-1: #7A6355;
+  --tone-2: #8F4D31;
+  --tone-3: #A03A1C;
+  color-scheme: light;
+}
+
+/* The OS preference, honoured when the user has not stamped an explicit choice.
+   The stamped attribute must win in BOTH directions, so this is scoped with
+   :not() — a user who runs their phone dark but wants Nomen light gets it. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --bg: #F4F1E9;
+    --surface: #FBF9F4;
+    --surface-2: #E9E4D8;
+    --bg-nav: #F7F5EE;
+    --hairline: #DFD9CA;
+    --line: #847A6B;
+    --line-strong: #6E6553;
+    --ink: #191510;
+    --ink-2: #484236;
+    --ink-3: #5E5749;
+    --accent: #A03A1C;
+    --accent-edge: #8A3218;
+    --accent-text: #A03A1C;
+    --on-accent: #FBF9F4;
+    --focus: #A03A1C;
+    --viz-mark: #A03A1C;
+    --viz-grid: #D8D1C0;
+    --good-text: #3C6130;
+    --warn-text: #78530F;
+    --bad-text: #8F3728;
+    --tone-0: #484236;
+    --tone-1: #7A6355;
+    --tone-2: #8F4D31;
+    --tone-3: #A03A1C;
+    color-scheme: light;
+  }
+}
+
+/* ── The pre-sleep variant ──────────────────────────────────────────────────
+   `plan.timeOfDay === 'PRE_SLEEP'` is already computed in dailyPlan.ts. Stamping
+   data-slot="pre-sleep" drops one step of ink and one of accent chroma for the
+   window the app is actually used in. Both still clear AA on every surface.
+   Deliberately does NOT dim --accent (the primary button a thumb is aiming at)
+   or --focus (a transient accessibility affordance).
+   ────────────────────────────────────────────────────────────────────────── */
+:root[data-slot='pre-sleep']:not([data-theme='light']) {
+  --ink: #D8D1C6;
+  --accent-text: #CE9377;
+  --viz-mark: #CE9377;
+}
+
+/* ── Non-colour tokens ─────────────────────────────────────────────────────── */
+
+:root {
+  /* Type. SEVEN sizes, THREE weights, THREE faces. Adding an eighth size
+     requires deleting one — this cap is enforced in review. */
+  --font-sans: system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI', Roboto,
+    'Helvetica Neue', 'Noto Sans', 'Liberation Sans', Arial, sans-serif;
+  --font-serif: ui-serif, 'New York', 'Iowan Old Style', Charter, 'Bitstream Charter',
+    'Sitka Text', Cambria, 'Palatino Linotype', Palatino, 'Book Antiqua', 'Noto Serif',
+    Georgia, 'Times New Roman', serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Cascadia Mono',
+    'Segoe UI Mono', 'Roboto Mono', 'DejaVu Sans Mono', 'Liberation Mono', monospace;
+
+  --t-name: clamp(2rem, 8.5vw, 2.375rem);
+  --t-figure: 1.75rem;
+  --t-title: 1.5rem;
+  --t-lede: 1.1875rem;
+  --t-body: 1rem;
+  --t-meta: 0.875rem;
+  --t-kicker: 0.75rem;
+
+  --lh-name: 1.1;
+  --lh-figure: 2rem;
+  --lh-title: 2rem;
+  --lh-lede: 1.75rem;
+  --lh-body: 1.5rem;
+  --lh-meta: 1.25rem;
+  --lh-kicker: 1rem;
+
+  --ls-name: -0.02em;
+  --ls-figure: -0.02em;
+  --ls-title: -0.02em;
+  --ls-lede: -0.005em;
+  --ls-body: 0;
+  --ls-mono: 0.01em;
+  --ls-kicker: 0.12em;
+
+  --w-regular: 400;
+  --w-medium: 500;
+  --w-bold: 600;
+
+  /* Space. 8px rhythm; 4 and 12 are a sub-grid permitted INSIDE a component
+     only, never between components. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  --gutter: 16px;
+  --page: 680px;
+  --measure: 34rem;
+  --measure-note: 28rem;
+
+  /* Geometry. There is no box-shadow with a blur radius in this app. */
+  --r-0: 0;
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-avatar: 50%;
+  --hair: 1px;
+  --shadow: none;
+
+  --tap: 44px;
+  --tap-lg: 56px;
+  --nav-h: 58px;
+
+  /* Motion. Seven transitions, one curve, zero @keyframes. */
+  --ease-draw: cubic-bezier(0.2, 0, 0, 1);
+  --dur-press: 90ms;
+  --dur-fade: 140ms;
+  --dur-page: 140ms;
+  --dur-advance: 160ms;
+  --dur-tab: 180ms;
+  --dur-rise: 240ms;
+  --dur-draw: 320ms;
+  --dur-lead: 40ms;
+}

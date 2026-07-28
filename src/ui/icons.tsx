@@ -37,7 +37,7 @@ function base(size: number) {
   }
 }
 
-export function IconToday({ size = 22, stroke = 1.5, active = false }: IconProps) {
+export function IconToday({ size = 24, stroke = 1.5, active = false }: IconProps) {
   return (
     <svg {...base(size)} strokeWidth={stroke}>
       <circle cx="12" cy="12" r="8.25" />
@@ -46,7 +46,7 @@ export function IconToday({ size = 22, stroke = 1.5, active = false }: IconProps
   )
 }
 
-export function IconCapture({ size = 22, stroke = 1.5, active = false }: IconProps) {
+export function IconCapture({ size = 24, stroke = 1.5, active = false }: IconProps) {
   return (
     <svg {...base(size)} strokeWidth={active ? stroke + 0.35 : stroke}>
       <path d="M12 4.75v14.5M4.75 12h14.5" />
@@ -54,7 +54,7 @@ export function IconCapture({ size = 22, stroke = 1.5, active = false }: IconPro
   )
 }
 
-export function IconPeople({ size = 22, stroke = 1.5, active = false }: IconProps) {
+export function IconPeople({ size = 24, stroke = 1.5, active = false }: IconProps) {
   const rows = [7.25, 12, 16.75]
   return (
     <svg {...base(size)} strokeWidth={stroke}>
@@ -75,7 +75,7 @@ export function IconPeople({ size = 22, stroke = 1.5, active = false }: IconProp
   )
 }
 
-export function IconInsights({ size = 22, stroke = 1.5, active = false }: IconProps) {
+export function IconInsights({ size = 24, stroke = 1.5, active = false }: IconProps) {
   return (
     <svg {...base(size)} strokeWidth={stroke}>
       {/* The axis: an L, kept lighter than the data — the grammar of every chart in the app. */}
@@ -87,7 +87,7 @@ export function IconInsights({ size = 22, stroke = 1.5, active = false }: IconPr
   )
 }
 
-export function IconProgram({ size = 22, stroke = 1.5, active = false }: IconProps) {
+export function IconProgram({ size = 24, stroke = 1.5, active = false }: IconProps) {
   return (
     <svg {...base(size)} strokeWidth={stroke}>
       <path d="M12 4.5v15" opacity={0.45} />
@@ -148,6 +148,25 @@ export function IconWaning({ size = 16, stroke = 1.5 }: IconProps) {
     <svg {...base(size)} strokeWidth={stroke}>
       <circle cx="12" cy="12" r="7.5" opacity={0.35} strokeDasharray="2.5 3" />
       <path d="M12 4.5a7.5 7.5 0 0 1 0 15" />
+    </svg>
+  )
+}
+
+/** The refusal mark — a broken rule, matching the figure dash the stat rows set. */
+export function IconNoData({ size = 16, stroke = 1.6 }: IconProps) {
+  return (
+    <svg {...base(size)} strokeWidth={stroke}>
+      <path d="M5 12h14" strokeDasharray="3 3" />
+    </svg>
+  )
+}
+
+/** The Moment Journal: a leaf turned down. Never a star, never a heart. */
+export function IconMoment({ size = 18, stroke = 1.5, active = false }: IconProps) {
+  return (
+    <svg {...base(size)} strokeWidth={stroke}>
+      <path d="M6 4.5h9.5L19 8v11.5H6z" fill={active ? 'currentColor' : 'none'} />
+      <path d="M15.5 4.5V8H19" />
     </svg>
   )
 }

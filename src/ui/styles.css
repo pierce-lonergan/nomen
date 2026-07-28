@@ -1,32 +1,31 @@
+@import './tokens.css';
+
 /*
- * Nomen's visual language is deliberately quiet.
+ * Nomen — the stylesheet.
  *
- * This is an app someone opens twice a day for a year, often at 22:40 in a dark room. There are
- * no confetti bursts, no progress bars that fill with a fanfare, and no red badges — the charter
- * in docs/02-engagement-design.md rules out manufactured urgency, and the styling has to hold that
- * line as much as the copy does.
+ * The thesis, so that any future argument about a detail can be settled without one:
+ *
+ *   Nomen looks like a ruled instrument built to hold people's names, and the name is
+ *   always the largest thing on the page.
+ *
+ * One 16px left rule runs down every screen and everything sits on it — nothing here is ever
+ * centred, because a razor-straight left edge is what makes a page scannable by someone half
+ * asleep at 22:40. Structure is carried by rules and voids rather than boxes: hairlines where a
+ * card border used to be, 32px of nothing where a drop shadow used to be.
+ *
+ * Three voices, one job each:
+ *   sans   the instrument — every heading, label, control, and word of prose
+ *   mono   everything measured — every value, interval, latency, and every n
+ *   serif  a human being's name, and nothing else, anywhere in the application
+ *
+ * That last reservation is the emotional argument of the whole design. A screen of grey
+ * monospace numerals with one warm serif name set into it is precisely what this app is about,
+ * and it means the change of face *is* the semantic marker: if it is in the serif, it is a
+ * person you care about.
+ *
+ * When a future detail is in dispute, ask: does this make the name bigger, the rule straighter,
+ * or the claim more honest? If it does none of the three, it does not ship.
  */
-
-:root {
-  --bg: #12100e;
-  --surface: #1b1815;
-  --surface-2: #241f1b;
-  --line: #332c26;
-  --text: #f2ece5;
-  --muted: #a2968a;
-  --dim: #6f655c;
-  --accent: #d9a441;
-  --accent-dim: #8a6a2c;
-  --good: #7fae6a;
-  --warn: #c98a52;
-  --bad: #b5645c;
-  --radius: 14px;
-  --maxw: 680px;
-
-  color-scheme: dark;
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 16px;
-}
 
 * {
   box-sizing: border-box;
@@ -35,225 +34,1361 @@
 
 body {
   margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--t-body);
+  line-height: var(--lh-body);
+  letter-spacing: var(--ls-body);
+  color: var(--ink);
   background: var(--bg);
-  color: var(--text);
-  line-height: 1.5;
   overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* THE left rule. 16px from the viewport edge, on every screen, all year. */
 .app {
-  max-width: var(--maxw);
-  margin: 0 auto;
-  padding: 0 16px calc(84px + env(safe-area-inset-bottom));
+  max-inline-size: var(--page);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  padding-block-end: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--s-6));
+}
+
+/* Prose has a measure independent of its container. The container grows; the text
+   column does not, and the margin absorbs the difference. */
+p,
+.prose,
+.note,
+li {
+  max-inline-size: var(--measure);
+}
+
+/* ── Focus. One global rule. ────────────────────────────────────────────────── */
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-2);
 }
 
 /* ── Typography ─────────────────────────────────────────────────────────────── */
 
-h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; margin: 24px 0 4px; }
-h2 { font-size: 1.05rem; font-weight: 600; margin: 28px 0 10px; letter-spacing: -0.01em; }
-h3 { font-size: 0.95rem; font-weight: 600; margin: 0 0 6px; }
-p { margin: 0 0 12px; }
+h1,
+.h1 {
+  margin: var(--s-6) 0 var(--s-2);
+  font-size: var(--t-title);
+  line-height: var(--lh-title);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-title);
+  color: var(--ink);
+  text-wrap: balance;
+}
 
-.muted { color: var(--muted); }
-.dim { color: var(--dim); font-size: 0.85rem; }
-.small { font-size: 0.85rem; }
-.mono { font-variant-numeric: tabular-nums; }
+.standfirst {
+  margin: 0 0 var(--s-5);
+  max-inline-size: var(--measure);
+  font-size: var(--t-lede);
+  line-height: var(--lh-lede);
+  letter-spacing: var(--ls-lede);
+  color: var(--ink-2);
+}
+
+/* A section is a word and a line. Never a box, never a background. */
+h2,
+.section {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin: var(--s-7) 0 var(--s-4);
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+h2::after,
+.section::after {
+  content: '';
+  flex: 1 1 auto;
+  block-size: 1px;
+  background: var(--line);
+}
+
+h3 {
+  margin: 0 0 var(--s-2);
+  font-size: var(--t-body);
+  line-height: var(--lh-body);
+  font-weight: var(--w-bold);
+  color: var(--ink);
+}
+
+p {
+  margin: 0 0 var(--s-3);
+}
+
+a {
+  color: var(--accent-text);
+}
+
+/* Every screen terminates in a rule. A page has a visible end, which is the
+   structural opposite of an infinite feed. */
+.page-end {
+  margin-block-start: var(--s-8);
+  border-block-start: 1px solid var(--line);
+}
+
+hr {
+  border: 0;
+  border-block-start: 1px solid var(--hairline);
+  margin: var(--s-5) 0;
+}
+
+/* Everything measured is mono and tabular. Setting all figures in mono makes an
+   oldstyle-figure column misalignment structurally unreachable. */
+.mono,
+.fig,
+.stat__value,
+.stat__n {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: var(--ls-mono);
+}
+
+/* A human being. The only place this family appears in the application. */
+.person-name {
+  font-family: var(--font-serif);
+  font-size-adjust: 0.48;
+  font-weight: var(--w-regular);
+  letter-spacing: var(--ls-name);
+  text-wrap: balance;
+}
+
+/* The honesty rail's floor: 14px, --ink-3, and never lighter or smaller than this. */
+.dim {
+  color: var(--ink-3);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+}
+.muted {
+  color: var(--ink-2);
+}
+.small {
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+}
 
 /* ── Layout primitives ──────────────────────────────────────────────────────── */
+
+.row {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+}
+.row.wrap {
+  flex-wrap: wrap;
+}
+.row.between {
+  justify-content: space-between;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.grow {
+  flex: 1;
+  min-inline-size: 0;
+}
+.spacer {
+  block-size: var(--s-2);
+}
+
+/* ── The card. A ruled panel, not a box. ────────────────────────────────────── */
 
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-bottom: 12px;
+  border-radius: var(--r-2);
+  padding: var(--s-4);
+  margin-block-end: var(--s-4);
+  box-shadow: var(--shadow);
+}
+.card.tight {
+  padding: var(--s-3) var(--s-4);
 }
 
-.card.tight { padding: 12px 14px; }
-.card.accent { border-color: var(--accent-dim); }
+/* The marked card is identified by a spot rule and a kicker, never by a fill —
+   the old translucent tint measured 1.10:1 against its surface. */
+.card.accent {
+  border-color: var(--line);
+  border-block-start: 3px solid var(--accent-text);
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
 
-.row { display: flex; gap: 10px; align-items: center; }
-.row.wrap { flex-wrap: wrap; }
-.row.between { justify-content: space-between; }
-.col { display: flex; flex-direction: column; gap: 10px; }
-.grow { flex: 1; min-width: 0; }
-.spacer { height: 8px; }
+.row-rule {
+  border-block-end: 1px solid var(--hairline);
+}
+.row-rule:last-child {
+  border-block-end: 0;
+}
 
-/* ── Controls ───────────────────────────────────────────────────────────────── */
+/* ── A person ───────────────────────────────────────────────────────────────
+   The single curve in the system; everything else is 0, 2 or 4px. A circle is the
+   universal sign for "a human being", and this app is about human beings — so the
+   exception is the point rather than an inconsistency. */
 
-button {
-  font: inherit;
-  color: var(--text);
+.avatar {
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--r-avatar);
+  object-fit: cover;
   background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 11px 16px;
+  box-shadow: 0 0 0 1px var(--hairline);
+  flex-shrink: 0;
+}
+.avatar.placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--ink-2);
+  font-size: var(--t-meta);
+  font-weight: var(--w-medium);
+}
+
+/* A photograph is tipped onto the page: hairline edge, 2px corner, no shadow. */
+.face {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--r-1);
+  background: var(--surface-2);
+  box-shadow: 0 0 0 1px var(--line);
+}
+/* An empty plate, not a hole. The same "instrument at rest" idea the charts use: the frame is
+   drawn, there is simply nothing on it yet — which reads as expectant rather than broken. */
+.face-placeholder {
+  display: grid;
+  align-content: end;
+  aspect-ratio: 4 / 3;
+  padding: var(--s-4);
+  border-radius: var(--r-1);
+  box-shadow: inset 0 0 0 1px var(--line);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--hairline) 0 1px,
+    transparent 1px 10px
+  );
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-3);
+}
+
+/* ══ THE RETRIEVAL ═══════════════════════════════════════════════════════════
+   Nothing here is centred, including the prompt — which is the thing most apps
+   would centre. Drama comes from scale and void, not symmetry.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.retrieval {
+  display: grid;
+  row-gap: var(--s-5);
+  padding-block: var(--s-5) var(--s-7);
+}
+
+/* The register: mode flush left, counter flush right, one rule. A folio line. */
+.retrieval__register {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-block-end: var(--s-2);
+  border-block-end: 1px solid var(--line);
+}
+.retrieval__mode {
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.retrieval__count {
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  letter-spacing: var(--ls-kicker);
+  color: var(--ink-3);
+}
+
+.retrieval__prompt-text {
+  margin: 0;
+  font-size: var(--t-name);
+  line-height: var(--lh-name);
+  letter-spacing: var(--ls-name);
+  color: var(--ink);
+  text-wrap: balance;
+}
+/* A role or a place is not a person: sans, and a step down. */
+.retrieval__prompt-text--label {
+  font-family: var(--font-sans);
+  font-size: var(--t-title);
+  line-height: var(--lh-title);
+  letter-spacing: var(--ls-title);
+}
+.retrieval__collection {
+  margin: 0 0 var(--s-2);
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ── The answer slot ───────────────────────────────────────────────────────
+   At rest the instrument shows a blank scale, not an empty box. The line is
+   blank because the user has not retrieved it yet, and that is the honest
+   picture of the state they are in. */
+
+.answer {
+  display: grid;
+  row-gap: var(--s-3);
+}
+
+.answer__rule {
+  position: relative;
+  display: block;
+  block-size: 2px;
+}
+/* layer A — the blank scale */
+.answer__rule::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: 1px;
+  background: repeating-linear-gradient(to right, var(--line) 0 6px, transparent 6px 12px);
+  opacity: 1;
+  transition: opacity var(--dur-fade) linear;
+}
+/* layer B — the rule the app draws when the name comes back */
+.answer__rule::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent-text);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-draw) var(--ease-draw);
+}
+.answer[data-revealed='true'] .answer__rule::before {
+  opacity: 0;
+}
+.answer[data-revealed='true'] .answer__rule::after {
+  transform: scaleX(1);
+}
+
+/* A grid stack: zero reflow on reveal, no absolute positioning. */
+.answer__slot {
+  display: grid;
+  grid-template-areas: 'stack';
+  align-items: start;
+  min-block-size: 104px;
+}
+.answer__slot > * {
+  grid-area: stack;
+}
+
+.answer__rest {
+  margin: 0;
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-3);
+  transition: opacity var(--dur-fade) linear;
+}
+.answer[data-revealed='true'] .answer__rest {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur-fade) linear, visibility 0s linear var(--dur-fade);
+}
+
+.answer__set {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity var(--dur-rise) var(--ease-draw) var(--dur-lead),
+    transform var(--dur-rise) var(--ease-draw) var(--dur-lead);
+}
+.answer[data-revealed='true'] .answer__set {
+  opacity: 1;
+  transform: none;
+}
+
+/* The largest type in the application. No score, streak, percentage or latency is
+   ever set larger than this. That is the law. */
+.answer__name {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--t-name);
+  font-size-adjust: 0.48;
+  font-weight: var(--w-regular);
+  line-height: var(--lh-name);
+  letter-spacing: var(--ls-name);
+  color: var(--ink);
+  text-wrap: balance;
+}
+.answer__phonetic {
+  margin: var(--s-2) 0 0;
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-3);
+}
+.answer__hook {
+  margin: var(--s-3) 0 0;
+  max-inline-size: var(--measure-note);
+  font-size: var(--t-body);
+  line-height: var(--lh-body);
+  color: var(--ink-2);
+}
+
+/* The competence statement. This sentence is the reinforcer the entire reward
+   model rests on, and it was previously set at 13px in the faintest ink in the
+   app. The move is not to add anything; it is to set the fact like it matters. */
+.held {
+  margin: var(--s-4) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--t-lede);
+  line-height: var(--lh-lede);
+  letter-spacing: var(--ls-lede);
+  color: var(--ink);
+}
+.held .fig {
+  color: var(--ink);
+}
+
+/* The next item settling in after a grade. One row. Never a cascade. */
+.queue-row {
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity var(--dur-advance) var(--ease-draw),
+    transform var(--dur-advance) var(--ease-draw);
+}
+.queue-row[data-in='true'] {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────────
+   Legacy class names from the screens (.primary/.full/.ghost/.danger) are kept
+   working so the diff to eleven screens stays small. */
+
+button,
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--s-2);
+  min-block-size: var(--tap);
+  padding: var(--s-3) var(--s-4);
+  font-family: var(--font-sans);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  font-weight: var(--w-medium);
+  text-align: start;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-2);
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
+  transition: background-color var(--dur-press) linear;
+}
+button:hover:not(:disabled),
+button:active:not(:disabled) {
+  background: var(--surface);
+}
+/* Disabled uses an ink token that still clears 4.5:1 rather than opacity: 0.4,
+   which dropped the old buttons to roughly 1.6:1. */
+button:disabled {
+  color: var(--ink-3);
+  border-color: var(--line);
+  cursor: not-allowed;
 }
 
-button:hover:not(:disabled) { background: #2d2721; }
-button:disabled { opacity: 0.4; cursor: not-allowed; }
+.full,
+.btn--full {
+  inline-size: 100%;
+  justify-content: center;
+}
+.btn--lg {
+  min-block-size: var(--tap-lg);
+  font-size: var(--t-body);
+}
 
-button.primary {
+/* One primary action per screen. The 1px keyline carries the control boundary,
+   so the fill never has to be bright. */
+.primary,
+.btn--primary {
+  color: var(--on-accent);
   background: var(--accent);
-  border-color: var(--accent);
-  color: #1a1408;
-  font-weight: 600;
+  border-color: var(--accent-edge);
+  font-weight: var(--w-bold);
 }
-button.primary:hover:not(:disabled) { background: #e6b355; }
+.primary:hover:not(:disabled),
+.primary:active:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 88%, var(--ink));
+}
+/* A disabled primary must lose its fill, not merely dim its label. Keeping the terracotta and
+   fading the text both misstates the hierarchy — it still reads as the action — and puts --ink-3
+   on --accent, which is the one pair in the app that would fail AA. */
+.primary:disabled {
+  color: var(--ink-3);
+  background: transparent;
+  border-color: var(--line);
+}
 
-button.ghost { background: transparent; }
-button.full { width: 100%; }
-button.danger { border-color: var(--bad); color: var(--bad); }
+.ghost,
+.btn--quiet {
+  background: transparent;
+}
 
-.grades { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.grade-miss { border-color: var(--bad); }
-.grade-cued { border-color: var(--warn); }
-.grade-got { border-color: var(--good); }
-.grade-instant { border-color: var(--accent); }
+/* Destructive is TYPOGRAPHIC, not chromatic. There is no red button in Nomen. */
+.danger,
+.btn--danger {
+  color: var(--bad-text);
+  border-color: var(--bad-text);
+  background: transparent;
+}
+.danger[data-confirm='true'] {
+  color: var(--bg);
+  background: var(--ink);
+  border-color: var(--ink);
+}
 
+.full + .full {
+  margin-block-start: var(--s-2);
+}
+
+/* ── The grade buttons ──────────────────────────────────────────────────────
+   Identity is carried by four channels in this order: the word, the rule style
+   (dotted/dashed/solid/double — survives greyscale AND forced colours), the rule
+   weight, and only then tone. There is no green and no red: a red MISS would
+   contradict the product's own thesis, which is that "I know everything but the
+   name" is the predicted default and must never be shamed. */
+
+.grades {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  padding: 1px;
+  background: var(--line);
+  border-radius: var(--r-0);
+  margin-block-start: var(--s-5);
+}
+
+.grade {
+  display: grid;
+  align-content: center;
+  row-gap: var(--s-1);
+  min-block-size: var(--tap-lg);
+  padding: var(--s-3);
+  border: 0;
+  border-block-start: 2px dotted var(--tone-0);
+  border-radius: var(--r-0);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: start;
+}
+.grade:hover,
+.grade:active {
+  background: var(--surface-2);
+}
+.grade:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -4px;
+}
+
+.grade[data-strength='0'] {
+  border-block-start: 2px dotted var(--tone-0);
+}
+.grade[data-strength='1'] {
+  border-block-start: 2px dashed var(--tone-1);
+}
+.grade[data-strength='2'] {
+  border-block-start: 3px solid var(--tone-2);
+}
+.grade[data-strength='3'] {
+  border-block-start: 5px double var(--tone-3);
+}
+
+.grade__sub {
+  font-family: var(--font-mono);
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ── The four-beat protocol checklist ───────────────────────────────────────
+   Four channels: the icon (an actual shape change), the leading rule style, the
+   weight, and tone. Never a background tint. */
+
+.beat {
+  display: grid;
+  grid-template-columns: 52px 1fr 24px;
+  align-items: start;
+  gap: var(--s-3);
+  inline-size: 100%;
+  min-block-size: var(--tap);
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4);
+  margin-block-end: var(--s-2);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-inline-start: 2px dotted var(--line-strong);
+  border-radius: var(--r-2);
+  text-align: start;
+}
+.beat:active {
+  background: var(--surface-2);
+}
+.beat__key {
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-kicker);
+  color: var(--ink-3);
+  padding-block-start: 2px;
+}
+.beat__text {
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-2);
+}
+.beat__mark {
+  color: var(--line-strong);
+  justify-self: end;
+  display: flex;
+}
+.beat[aria-pressed='true'] {
+  border-color: var(--hairline);
+  border-inline-start: 2px solid var(--good-text);
+}
+.beat[aria-pressed='true'] .beat__key {
+  color: var(--ink);
+}
+.beat[aria-pressed='true'] .beat__text {
+  color: var(--ink);
+}
+.beat[aria-pressed='true'] .beat__mark {
+  color: var(--good-text);
+}
+
+/* ── Stat rows, and the refusal ─────────────────────────────────────────────
+   A refusal occupies the number's slot, at the number's size, on the number's
+   baseline, in the same column. The row keeps its exact height. The LABEL IS NOT
+   DIMMED — dimming the row is what makes an honest state read as a broken one. */
+
+.stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--s-4);
+  min-block-size: var(--tap);
+  padding-block: var(--s-3);
+  border-block-end: 1px solid var(--hairline);
+}
+.stat:last-child {
+  border-block-end: 0;
+}
+
+.stat__label {
+  display: grid;
+  row-gap: var(--s-1);
+  min-inline-size: 0;
+}
+.stat__name {
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink);
+}
+/* A caveat is never smaller than 14px and never lighter than --ink-3, so it can
+   never be visually cheaper than the claim it qualifies. */
+.stat__hint {
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-3);
+  text-wrap: pretty;
+  max-inline-size: var(--measure-note);
+}
+
+.stat__read {
+  display: grid;
+  justify-items: end;
+  row-gap: var(--s-1);
+}
+.stat__value {
+  font-size: var(--t-figure);
+  line-height: var(--lh-figure);
+  letter-spacing: var(--ls-figure);
+  font-feature-settings: 'zero' 1;
+  color: var(--ink);
+}
+.stat__unit {
+  margin-inline-start: 2px;
+  font-size: var(--t-meta);
+  letter-spacing: 0;
+  color: var(--ink-3);
+}
+/* A figure without a sample size has no component to live in. Never abbreviated,
+   never in a tooltip, never below 14px. */
+.stat__n {
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+/* The refusal: a mode, not a fault. No opacity change, no error colour, no icon. */
+.stat[data-sufficient='false'] .stat__value {
+  color: var(--ink-2);
+  letter-spacing: 0.06em;
+}
+.stat--streak .stat__value {
+  font-size: var(--t-lede);
+  line-height: var(--lh-lede);
+}
+
+.record-note {
+  margin: var(--s-3) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-3);
+}
+
+/* The adherence meter. A ruler, and it cannot fill. */
+.bar {
+  block-size: 4px;
+  background: var(--surface-2);
+  border-radius: var(--r-0);
+  overflow: hidden;
+}
+.bar > span {
+  display: block;
+  block-size: 100%;
+  background: var(--ink-2);
+  transition: none !important;
+  animation: none !important;
+}
+.bar[data-sufficient='false'] {
+  block-size: 0;
+  background: none;
+  border-block-end: 1px solid var(--line-strong);
+}
+.bar[data-sufficient='false'] > span {
+  display: none;
+}
+
+/* ── The evidence note ──────────────────────────────────────────────────────
+   The serif is NOT used here. It is reserved to human names, and a system serif
+   at 14px across four platforms is exactly where the fallback story is worst. */
+
+.evidence {
+  margin: var(--s-4) 0 0;
+  padding-inline-start: var(--s-4);
+  max-inline-size: var(--measure-note);
+  border-inline-start: 2px solid var(--line-strong);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-2);
+}
+.evidence::before {
+  content: 'why';
+  display: block;
+  margin-block-end: var(--s-1);
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+@media (min-width: 600px) {
+  .card:has(> .evidence) {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    column-gap: var(--s-5);
+  }
+  .card:has(> .evidence) > :not(.evidence) {
+    grid-column: 2;
+  }
+  .evidence {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    margin: 0;
+    padding-inline-start: 0;
+    border-inline-start: 0;
+    border-block-start: 2px solid var(--line-strong);
+    padding-block-start: var(--s-2);
+  }
+}
+
+/* ── Form controls ──────────────────────────────────────────────────────────── */
+
+.field {
+  margin-block-end: var(--s-4);
+}
+label {
+  display: block;
+  margin-block-end: var(--s-1);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+}
 input,
 select,
 textarea {
-  font: inherit;
-  width: 100%;
-  color: var(--text);
+  inline-size: 100%;
+  min-block-size: var(--tap);
+  padding: var(--s-3);
+  font-family: var(--font-sans);
+  font-size: var(--t-body);
+  line-height: var(--lh-body);
+  color: var(--ink);
   background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 11px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-2);
 }
-
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-dim); outline-offset: 1px; }
-label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 5px; }
-.field { margin-bottom: 14px; }
-
-.chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.chip {
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-3);
+}
+textarea {
+  min-block-size: calc(var(--tap) * 2);
+  resize: vertical;
+}
+input[type='range'] {
+  min-block-size: var(--tap);
+  padding: 0;
   background: transparent;
-  font-size: 0.85rem;
+  border: 0;
+  accent-color: var(--accent-text);
 }
-.chip.on { border-color: var(--accent); background: rgba(217, 164, 65, 0.14); color: var(--accent); }
+input[type='file'] {
+  padding: var(--s-2);
+  font-size: var(--t-meta);
+  color: var(--ink-2);
+}
+.field .dim {
+  margin-block-start: var(--s-1);
+}
 
-/* ── Protocol beats ─────────────────────────────────────────────────────────── */
+/* ── Chips ──────────────────────────────────────────────────────────────────
+   Not a pill. Nothing in this app is a pill. Selection is a leading rule plus a
+   border, an ink step and a weight step — never a fill. */
 
-.beat {
+.chips {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 12px;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-block-size: var(--tap);
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+  background: transparent;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  margin-bottom: 8px;
-  background: var(--surface);
-  text-align: left;
-  width: 100%;
+  border-radius: var(--r-2);
 }
-.beat.done { border-color: var(--good); background: rgba(127, 174, 106, 0.08); }
-.beat-key {
-  font-weight: 700;
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-  min-width: 44px;
-  padding-top: 2px;
+.chip:active {
+  background: var(--surface-2);
 }
-.beat.done .beat-key { color: var(--good); }
+.chip.on {
+  color: var(--ink);
+  border-color: var(--accent-text);
+  border-inline-start-width: 3px;
+  padding-inline-start: calc(var(--s-3) - 2px);
+  font-weight: var(--w-bold);
+}
 
-/* ── Data display ───────────────────────────────────────────────────────────── */
-
-.stat { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--line); }
-.stat:last-child { border-bottom: none; }
-.stat-value { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
-.stat-value.insufficient { color: var(--dim); font-size: 0.9rem; }
-
-.bar { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
-.bar > span { display: block; height: 100%; background: var(--accent); }
+/* ── Pills. A label, never a fill, never a badge, never a count. ─────────────── */
 
 .pill {
   display: inline-block;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  padding: 2px var(--s-2);
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-kicker);
   text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 999px;
+  color: var(--ink-2);
+  background: transparent;
   border: 1px solid var(--line);
-  color: var(--muted);
+  border-radius: var(--r-1);
 }
-.pill.good { color: var(--good); border-color: var(--good); }
-.pill.warn { color: var(--warn); border-color: var(--warn); }
-
-.face {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 12px;
-  background: var(--surface-2);
-  display: block;
+/* Tone is REINFORCEMENT — the level is always spelled out in the label itself,
+   so nothing depends on hue. */
+.pill.good {
+  color: var(--good-text);
+  border-color: var(--good-text);
 }
-.face-placeholder {
-  display: grid;
-  place-items: center;
-  font-size: 3rem;
-  color: var(--dim);
+.pill.warn {
+  color: var(--warn-text);
+  border-color: var(--warn-text);
 }
 
-.avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--surface-2); flex-shrink: 0; }
-.avatar.placeholder { display: grid; place-items: center; color: var(--dim); font-size: 0.9rem; }
-
-.reward {
-  border: 1px solid var(--accent-dim);
-  background: rgba(217, 164, 65, 0.08);
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin-bottom: 10px;
-}
-
-.evidence {
-  font-size: 0.82rem;
-  color: var(--muted);
-  border-left: 2px solid var(--line);
-  padding-left: 12px;
-  margin: 10px 0;
-}
-
-/* ── Navigation ─────────────────────────────────────────────────────────────── */
+/* ── The bottom tab bar ─────────────────────────────────────────────────────
+   Opaque: no backdrop-filter, no blur. Better for battery, better for low-end
+   text rendering, and it stops content swimming under the bar. */
 
 .nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(18, 16, 14, 0.94);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid var(--line);
-  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 10;
   display: flex;
   justify-content: center;
   gap: 2px;
+  padding-block: var(--s-2);
+  padding-block-end: calc(var(--s-2) + env(safe-area-inset-bottom));
+  padding-inline: var(--s-2);
+  background: var(--bg-nav);
+  border-block-start: 1px solid var(--line);
 }
-.nav a {
-  flex: 1;
-  max-width: 96px;
-  text-align: center;
-  padding: 6px 2px;
-  color: var(--dim);
+.nav__item {
+  position: relative;
+  flex: 1 1 0;
+  max-inline-size: 104px;
+  min-block-size: var(--tap);
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  row-gap: 2px;
+  padding-block: var(--s-1);
+  color: var(--ink-3);
   text-decoration: none;
-  font-size: 0.68rem;
-  border-radius: 8px;
+  border-radius: var(--r-2);
 }
-.nav a.active { color: var(--accent); }
-.nav-icon { display: block; font-size: 1.15rem; line-height: 1.4; }
+.nav__label {
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  font-weight: var(--w-medium);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+}
+/* The marker is a rule that MOVES, not a colour that fades. */
+.nav__mark {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 50%;
+  inline-size: 28px;
+  block-size: 2px;
+  background: var(--accent-text);
+  transform: translateX(-50%) scaleX(0);
+  transition: transform var(--dur-tab) var(--ease-draw);
+}
+.nav__item[aria-current='page'] {
+  color: var(--accent-text);
+}
+.nav__item[aria-current='page'] .nav__label {
+  font-weight: var(--w-bold);
+}
+.nav__item[aria-current='page'] .nav__mark {
+  transform: translateX(-50%) scaleX(1);
+}
 
-a { color: var(--accent); }
+/* ── Empty states ───────────────────────────────────────────────────────────
+   Not an error and not a degraded screen. Same sizes, same ink, nothing dimmed,
+   no illustration. The lapse/return state is typographically identical to a good
+   day — the charter's no-guilt rule expressed as a visual invariant rather than
+   trusted to copy. A cleared list is the celebration. */
 
-.center { text-align: center; }
-.big-prompt { font-size: 1.6rem; font-weight: 600; text-align: center; margin: 20px 0; letter-spacing: -0.02em; }
+.empty {
+  padding-block: var(--s-6) var(--s-7);
+  text-align: start;
+  max-inline-size: var(--measure);
+}
+.empty h3 {
+  margin: 0 0 var(--s-2);
+  font-size: var(--t-title);
+  line-height: var(--lh-title);
+  letter-spacing: var(--ls-title);
+  font-weight: var(--w-bold);
+  color: var(--ink);
+}
+.empty p {
+  margin: 0 0 var(--s-5);
+  font-size: var(--t-lede);
+  line-height: var(--lh-lede);
+  color: var(--ink-2);
+}
 
-.empty { text-align: center; color: var(--muted); padding: 40px 20px; }
+/* ── The reward. A dateline, not a burst. ───────────────────────────────────── */
 
-hr { border: none; border-top: 1px solid var(--line); margin: 20px 0; }
+.reward {
+  margin-block-end: var(--s-5);
+  padding: 0;
+  background: none;
+  border: 0;
+}
+.reward::before {
+  content: '';
+  display: block;
+  inline-size: 28px;
+  block-size: 3px;
+  margin-block-end: var(--s-3);
+  background: var(--accent-text);
+}
+.reward__kicker {
+  display: block;
+  margin-block-end: var(--s-1);
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+.reward__headline {
+  margin: 0;
+  font-size: var(--t-lede);
+  line-height: var(--lh-lede);
+  letter-spacing: var(--ls-lede);
+  color: var(--ink);
+}
+.reward__detail {
+  margin: var(--s-1) 0 0;
+  max-inline-size: var(--measure-note);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-2);
+}
+
+/* The ONE typographic celebration in the application: a three-line initial on the
+   capability statement, which fires once every 6–12 weeks on a gate the user
+   actually met. Its rarity IS the celebration. Adding a second use deletes the
+   first. */
+.capability::first-letter {
+  float: inline-start;
+  margin-inline-end: var(--s-2);
+  padding-block-start: 2px;
+  font-family: var(--font-serif);
+  font-size: 3.4em;
+  line-height: 0.84;
+  font-weight: var(--w-regular);
+  color: var(--accent-text);
+}
+
+/* One line at the foot of Settings only. A plate on every screen is costume. */
+.plate {
+  margin-block-start: var(--s-6);
+  padding-block-start: var(--s-3);
+  border-block-start: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  letter-spacing: var(--ls-mono);
+  color: var(--ink-3);
+}
+
+/* ══ THE CHART LANGUAGE ══════════════════════════════════════════════════════ */
+
+.viz {
+  margin: 0 0 var(--s-5);
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+}
+.viz-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-block-end: var(--s-4);
+}
+.viz-title {
+  display: block;
+  font-size: var(--t-kicker);
+  line-height: var(--lh-kicker);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.viz-caption {
+  display: block;
+  margin-block-start: var(--s-1);
+  max-inline-size: var(--measure-note);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-2);
+}
+.viz-toggle {
+  flex: 0 0 auto;
+  min-block-size: var(--tap);
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--t-kicker);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+}
+.viz-svg {
+  inline-size: 100%;
+  block-size: auto;
+  display: block;
+  overflow: visible;
+}
+.viz-grid {
+  stroke: var(--viz-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.viz-tick {
+  fill: var(--ink-3);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 11px;
+}
+.viz-line {
+  fill: none;
+  stroke: var(--viz-mark);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.viz-dot {
+  fill: var(--viz-mark);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+/* HOLLOW, never faded. "Measured, but not yet enough to join" — not "disabled". */
+.viz-dot-sparse {
+  fill: var(--surface);
+  stroke: var(--viz-mark);
+  stroke-width: 2;
+}
+.viz-label {
+  fill: var(--ink);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 13px;
+  font-weight: 500;
+}
+.viz-note {
+  margin: var(--s-3) 0 0;
+  max-inline-size: var(--measure);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-3);
+}
+
+.viz-bars {
+  display: grid;
+  row-gap: var(--s-4);
+}
+.viz-bar-row {
+  display: grid;
+  row-gap: var(--s-2);
+}
+.viz-bar-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink);
+}
+.viz-bar-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.viz-bar-n {
+  color: var(--ink-3);
+  margin-inline-start: var(--s-2);
+}
+.viz-bar-track {
+  block-size: 8px;
+  background: var(--surface-2);
+  border-radius: var(--r-0);
+}
+.viz-bar-fill {
+  block-size: 100%;
+  background: var(--viz-mark);
+  border-start-end-radius: 4px;
+  border-end-end-radius: 4px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  transition: none !important;
+  animation: none !important;
+}
+.viz-bar-fill.sparse {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--viz-mark);
+}
+
+/* The instrument at rest. Nothing measured yet — the scale is drawn, there is
+   simply nothing to plot. A collapsed empty box reads as breakage; an unfilled
+   instrument reads as calm and expectant. */
+.viz-fallback {
+  display: grid;
+  align-content: end;
+  padding: var(--s-4) 0 var(--s-3) var(--s-4);
+  border-inline-start: 1px solid var(--line);
+  border-block-end: 1px solid var(--line);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--viz-grid) 0 1px,
+    transparent 1px 33.33%
+  );
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-3);
+  max-inline-size: var(--measure-note);
+}
+
+.viz-table-wrap {
+  overflow-x: auto;
+}
+.viz-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+.viz-table th,
+.viz-table td {
+  padding: var(--s-2) var(--s-3) var(--s-2) 0;
+  text-align: start;
+  border-block-end: 1px solid var(--hairline);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  font-weight: var(--w-regular);
+}
+.viz-table thead th {
+  font-size: var(--t-kicker);
+  font-weight: var(--w-bold);
+  letter-spacing: var(--ls-kicker);
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-block-end-color: var(--line);
+}
+.viz-table td {
+  color: var(--ink);
+}
+.viz-table td.dim {
+  color: var(--ink-3);
+}
+
+/* ── Charter section 6, enforced in the stylesheet rather than asked for in
+   review: no progress bar that fills with a fanfare. The only meter in the app
+   renders at its final width on mount. ───────────────────────────────────── */
+
+.bar > span,
+.viz-bar-fill {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ── Reduced motion. One global block, so a component added next year is covered
+   automatically. This is not "faster animation" — it is no animation, with the
+   end state applied directly. ─────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-press: 0.01ms;
+    --dur-fade: 0.01ms;
+    --dur-page: 0.01ms;
+    --dur-advance: 0.01ms;
+    --dur-tab: 0.01ms;
+    --dur-rise: 0.01ms;
+    --dur-draw: 0.01ms;
+    --dur-lead: 0s;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  .answer__set,
+  .queue-row {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .dim,
+  .stat__n,
+  .stat__hint,
+  .viz-tick,
+  .viz-bar-n {
+    color: var(--ink-2);
+  }
+  .stat,
+  .beat,
+  .row-rule {
+    border-color: var(--line);
+  }
+  .stat[data-sufficient='false'] .stat__value {
+    color: var(--ink);
+  }
+}
+
+@media (forced-colors: active) {
+  .grades {
+    padding: 0;
+    gap: var(--s-1);
+    background: none;
+  }
+  .grade {
+    border: 1px solid CanvasText;
+    border-block-start-width: 3px;
+  }
+  .primary {
+    border: 2px solid CanvasText;
+  }
+  .nav__item[aria-current='page'] .nav__mark {
+    background: Highlight;
+  }
+  .viz-line,
+  .viz-dot {
+    stroke: CanvasText;
+  }
+  .viz-dot {
+    fill: Canvas;
+  }
+  .viz-bar-fill {
+    background: CanvasText;
+  }
+  .viz-bar-fill.sparse {
+    background: none;
+    border: 1px solid CanvasText;
+  }
+  .viz-grid {
+    stroke: CanvasText;
+    opacity: 0.4;
+  }
+  .answer__rule::after {
+    background: CanvasText;
+  }
+}

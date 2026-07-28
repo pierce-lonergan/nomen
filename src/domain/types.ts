@@ -27,6 +27,19 @@ export const MODES_FOR_TRACK: Record<TrackKind, RetrievalMode[]> = {
   PLACE: ['PLACE_RECALL'],
 }
 
+/**
+ * Whether a subject is a human being, and therefore whether their name is set in the serif.
+ *
+ * The visual system reserves one typeface for people and nothing else, which makes the change of
+ * face itself the semantic marker: if it is in the serif, it is a person. A character in a novel
+ * is a person. **A place is not** — and because CAST, PERSON and PLACE all ride the same `Person`
+ * record, that distinction has to be a branch on the data rather than on the component. It lives
+ * here, in the domain, so it can be tested without a DOM.
+ */
+export function isHuman(track: TrackKind): boolean {
+  return track === 'PERSON' || track === 'CAST'
+}
+
 // ── Grading ───────────────────────────────────────────────────────────────────
 // `CUED` is not a partial credit — it is the tip-of-the-tongue state, logged separately
 // because TOT frequency is one of the brief's named process metrics.

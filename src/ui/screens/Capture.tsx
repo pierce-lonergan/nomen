@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore, type CaptureDraft } from '../../state/store'
-import type { MeetAgainLikelihood, NoiseLevel, ProtocolAdherence } from '../../domain/types'
+import type { MeetAgainLikelihood, NoiseLevel, Person, ProtocolAdherence } from '../../domain/types'
 import { filesToDataUrls } from '../../lib/image'
-import { Chips, Evidence, Header } from '../components'
+import { Chips, Evidence, Header, PersonName } from '../components'
+import { IconCheck, IconCircle } from '../icons'
 
 /**
  * The Capture screen — the moment loop.
@@ -17,6 +18,10 @@ import { Chips, Evidence, Header } from '../components'
  * 2. There is no imagery step. Patton (1994) found the keyword-image method gave no benefit when
  *    attempted during real conversation — it collapses under divided attention. The live protocol
  *    is hear / say / look / hook, and heavy imagery is confined to offline review.
+ *
+ * The confirmation is the screen's signature moment, and it is deliberately the quietest thing in
+ * the application: one word, one rule, one figure. No burst, no tick, no animation. A capture that
+ * congratulates itself is a capture that has mistaken the app for the point.
  */
 
 const BEATS: { key: keyof ProtocolAdherence; label: string; instruction: string }[] = [
@@ -63,8 +68,11 @@ export default function Capture() {
   const [fatigue, setFatigue] = useState(2)
   const [stress, setStress] = useState(2)
   const [images, setImages] = useState<string[]>([])
-  const [saved, setSaved] = useState<{ name: string; roster: boolean } | null>(null)
+  const [saved, setSaved] = useState<Person | null>(null)
   const [showContext, setShowContext] = useState(false)
+  /* The file input is visually hidden so the visible control can be a real button. It is still in
+     the tab order, so its focus ring has to be borrowed by the label that stands in for it. */
+  const [photoFocused, setPhotoFocused] = useState(false)
 
   const canSave = givenName.trim().length > 0
 
@@ -82,29 +90,33 @@ export default function Capture() {
       imageDataUrls: images,
     }
     const person = await state.capture(draft, now)
-    setSaved({ name: person.displayName, roster: person.status === 'ROSTER' })
+    setSaved(person)
   }
 
   if (saved) {
     return (
       <>
-        <Header title="Caught." sub={`${saved.name} is in.`} />
-        <div className="card accent">
-          <p>
-            Your first check is in <strong>20 seconds</strong>. That one is meant to be easy — an
-            expanding schedule only pays off if the first retrieval succeeds, so it is deliberately
-            almost free.
+        <Header title="Caught." />
+        <p className="standfirst">
+          <PersonName person={saved} /> is in. Your first check is in <span className="fig">20</span>{' '}
+          seconds.
+        </p>
+        <p>
+          That one is meant to be easy — an expanding schedule only pays off if the first retrieval
+          succeeds, so it is deliberately almost free.
+        </p>
+        {saved.status === 'ROSTER' && (
+          <p className="record-note">
+            You have already hit today’s intake cap, so <PersonName person={saved} /> is on the
+            roster rather than in rotation. Nothing is lost — they come in tomorrow,
+            highest-likelihood first.
           </p>
-          {saved.roster && (
-            <p className="small muted">
-              You have already hit today’s intake cap, so {saved.name} is on the roster rather than in
-              rotation. Nothing is lost — they come in tomorrow, highest-likelihood first.
-            </p>
-          )}
-          <button className="primary full" onClick={() => navigate('/session')}>
-            Go to the 20-second check
-          </button>
-        </div>
+        )}
+
+        <div className="spacer" />
+        <button className="primary full" onClick={() => navigate('/session')}>
+          Go to the 20-second check
+        </button>
         <button
           className="full ghost"
           onClick={() => {
@@ -143,22 +155,28 @@ export default function Capture() {
       </div>
 
       <h2>The four beats</h2>
-      <p className="small muted">
+      <p className="record-note">
         Tap each one as you do it — not as an intention. Adherence is the metric that predicts
         everything downstream, and it only means something if it is honest.
       </p>
-      {BEATS.map((beat) => (
-        <button
-          key={beat.key}
-          type="button"
-          className={`beat${adherence[beat.key] ? ' done' : ''}`}
-          onClick={() => setAdherence((a) => ({ ...a, [beat.key]: !a[beat.key] }))}
-        >
-          <span className="beat-key">{beat.label}</span>
-          <span className="grow small">{beat.instruction}</span>
-          <span aria-hidden>{adherence[beat.key] ? '✓' : '○'}</span>
-        </button>
-      ))}
+      <div style={{ marginBlockStart: 'var(--s-4)' }}>
+        {BEATS.map((beat) => {
+          const done = adherence[beat.key]
+          return (
+            <button
+              key={beat.key}
+              type="button"
+              className="beat"
+              aria-pressed={done}
+              onClick={() => setAdherence((a) => ({ ...a, [beat.key]: !a[beat.key] }))}
+            >
+              <span className="beat__key">{beat.label}</span>
+              <span className="beat__text">{beat.instruction}</span>
+              <span className="beat__mark">{done ? <IconCheck /> : <IconCircle />}</span>
+            </button>
+          )
+        })}
+      </div>
 
       <h2>Details</h2>
       <div className="field">
@@ -169,10 +187,10 @@ export default function Capture() {
           onChange={(e) => setHook(e.target.value)}
           placeholder="architect, sails at weekends"
         />
-        <div className="dim" style={{ marginTop: 4 }}>
+        <p className="dim">
           Semantic and biographical, not appearance. A name is a dead-end label until you connect it
           to something — that is the whole Baker/baker problem.
-        </div>
+        </p>
       </div>
 
       <div className="field">
@@ -183,10 +201,10 @@ export default function Capture() {
           onChange={(e) => setPhonetic(e.target.value)}
           placeholder="SAH-ra, not SARE-a"
         />
-        <div className="dim" style={{ marginTop: 4 }}>
+        <p className="dim">
           Asking for the spelling or origin buys you a second clear hearing and a semantic hook in
           one move. It is the mechanically justified thing to do, not just the polite one.
-        </div>
+        </p>
       </div>
 
       <div className="field">
@@ -199,29 +217,59 @@ export default function Capture() {
         <Chips
           value={likelihood}
           onChange={setLikelihood}
+          label="Likely to meet again?"
           options={[
             { value: 'HIGH', label: 'Often' },
             { value: 'MEDIUM', label: 'Maybe' },
             { value: 'LOW', label: 'Probably not' },
           ]}
         />
-        <div className="dim" style={{ marginTop: 4 }}>
+        <p className="dim">
           This drives triage. When the queue is over capacity, the people you will actually see come
           first — a scheduler for people can do that, and a scheduler for flashcards cannot.
-        </div>
+        </p>
       </div>
 
+      {/* The file input keeps its own semantics and its place in the tab order; it is simply set to
+          zero opacity underneath the label, which is the visible control. Never display:none. */}
       <div className="field">
         <label htmlFor="photo">Photo (optional)</label>
-        <input
-          id="photo"
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={async (e) => setImages(await filesToDataUrls(e.target.files))}
-        />
+        <label
+          className="btn"
+          htmlFor="photo"
+          style={{
+            position: 'relative',
+            overflow: 'hidden',
+            ...(photoFocused ? { outline: '2px solid var(--focus)', outlineOffset: '2px' } : null),
+          }}
+          onFocus={() => setPhotoFocused(true)}
+          onBlur={() => setPhotoFocused(false)}
+        >
+          <input
+            id="photo"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={async (e) => setImages(await filesToDataUrls(e.target.files))}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              inlineSize: '100%',
+              blockSize: '100%',
+              opacity: 0,
+              cursor: 'pointer',
+            }}
+          />
+          {images.length > 0 ? (
+            <>
+              Add another look · <span className="fig">{images.length}</span> attached
+            </>
+          ) : (
+            'Choose a photo'
+          )}
+        </label>
         {images.length > 0 && (
-          <div className="row wrap" style={{ marginTop: 8 }}>
+          <div className="row wrap" style={{ marginBlockStart: 'var(--s-3)' }}>
             {images.map((src) => (
               <img key={src} src={src} alt="" className="avatar" />
             ))}
@@ -234,21 +282,26 @@ export default function Capture() {
         </Evidence>
       </div>
 
-      <button className="full ghost" onClick={() => setShowContext((s) => !s)}>
+      <button
+        className="full ghost"
+        aria-expanded={showContext}
+        onClick={() => setShowContext((s) => !s)}
+      >
         {showContext ? 'Hide conditions' : 'Log the conditions (optional)'}
       </button>
 
       {showContext && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <p className="small muted">
+        <div className="card" style={{ marginBlockStart: 'var(--s-3)' }}>
+          <p className="record-note" style={{ marginBlockStart: 0 }}>
             These are the confounds. Logging them is what later turns “I’m bad with names” into
             “I’m bad with names in loud rooms”, which is a different and far more fixable problem.
           </p>
-          <div className="field">
+          <div className="field" style={{ marginBlockStart: 'var(--s-4)' }}>
             <label>Noise</label>
             <Chips
               value={noise}
               onChange={setNoise}
+              label="Noise"
               options={[
                 { value: 'QUIET', label: 'Quiet' },
                 { value: 'MODERATE', label: 'Some' },
@@ -257,16 +310,27 @@ export default function Capture() {
             />
           </div>
           <div className="field">
-            <label htmlFor="fatigue">Tiredness: {fatigue}/5</label>
+            <label htmlFor="fatigue">
+              Tiredness <span className="fig">{fatigue}/5</span>
+            </label>
             <input id="fatigue" type="range" min={1} max={5} value={fatigue} onChange={(e) => setFatigue(+e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="stress">Stress: {stress}/5</label>
+            <label htmlFor="stress">
+              Stress <span className="fig">{stress}/5</span>
+            </label>
             <input id="stress" type="range" min={1} max={5} value={stress} onChange={(e) => setStress(+e.target.value)} />
           </div>
-          <button className={`chip${alcohol ? ' on' : ''}`} onClick={() => setAlcohol((a) => !a)}>
-            Drinking
-          </button>
+          <div className="chips">
+            <button
+              type="button"
+              className={`chip${alcohol ? ' on' : ''}`}
+              aria-pressed={alcohol}
+              onClick={() => setAlcohol((a) => !a)}
+            >
+              Drinking
+            </button>
+          </div>
         </div>
       )}
 
@@ -274,9 +338,9 @@ export default function Capture() {
       <button className="primary full" disabled={!canSave} onClick={() => void save()}>
         Capture
       </button>
-      <div className="dim center" style={{ marginTop: 8 }}>
+      <p className="record-note">
         Stored on this device only. Nothing is uploaded, because there is nowhere to upload it to.
-      </div>
+      </p>
     </>
   )
 }

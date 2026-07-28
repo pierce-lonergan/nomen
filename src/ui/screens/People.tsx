@@ -3,9 +3,17 @@ import { Link } from 'react-router-dom'
 import { useStore } from '../../state/store'
 import { needsMoreLooks, varietyCoverage } from '../../domain/faceVariety'
 import { formatInterval } from '../../domain/time'
+import { MIN_N } from '../../domain/metrics/recall'
 import { useNow } from '../hooks'
-import { Avatar, Bar, Empty, Header } from '../components'
+import { Avatar, Bar, Empty, Header, PersonName } from '../components'
 
+/**
+ * The roster.
+ *
+ * The list is rows on rules, not stacked cards — a boxed list of human beings reads as a settings
+ * screen. And this is the screen where the direction's central claim gets demonstrated at length:
+ * scrolling a register where **every name is the only serif on a page of grotesque**.
+ */
 export default function People() {
   const state = useStore()
   const now = useNow()
@@ -24,26 +32,28 @@ export default function People() {
     })
     .sort((a, b) => b.metAt - a.metAt)
 
+  const total = state.people.filter((p) => p.track === 'PERSON').length
+
   return (
     <>
-      <Header title="People" sub={`${state.people.filter((p) => p.track === 'PERSON').length} in your records`} />
+      <Header title="People" sub={`${total} in your records.`} />
 
       <div className="card tight">
         <div className="row between">
           <span className="small">Known from more than one occasion</span>
-          <span className="mono">
+          <span className="mono small">
             {coverage.covered}/{coverage.total}
           </span>
         </div>
         <div className="spacer" />
-        <Bar value={coverage.ratio} />
-        <div className="dim" style={{ marginTop: 6 }}>
-          A single photo teaches you a photograph. Real face learning needs looks from different
-          days — this is a phase-2 gate for exactly that reason.
-        </div>
+        <Bar value={coverage.ratio} sufficient={coverage.total >= MIN_N} />
+        <p className="dim" style={{ marginBlockStart: 'var(--s-2)' }}>
+          A single photograph teaches you a photograph. Real face learning needs looks from
+          different days — this is a phase-2 gate for exactly that reason.
+        </p>
       </div>
 
-      <div className="chips" style={{ margin: '14px 0' }}>
+      <div className="chips" role="radiogroup" aria-label="Filter" style={{ margin: 'var(--s-5) 0 var(--s-4)' }}>
         {(
           [
             ['ACTIVE', 'In rotation'],
@@ -51,7 +61,14 @@ export default function People() {
             ['ATTENTION', 'Needs attention'],
           ] as const
         ).map(([value, label]) => (
-          <button key={value} className={`chip${filter === value ? ' on' : ''}`} onClick={() => setFilter(value)}>
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={filter === value}
+            className={`chip${filter === value ? ' on' : ''}`}
+            onClick={() => setFilter(value)}
+          >
             {label}
           </button>
         ))}
@@ -72,28 +89,52 @@ export default function People() {
           }
         />
       ) : (
-        shown.map((p) => {
-          const items = state.items.filter((i) => i.subjectId === p.id)
-          const next = items.sort((a, b) => a.due - b.due)[0]
-          const flagged = reencode.some((i) => i.subjectId === p.id)
-          return (
-            <Link key={p.id} to={`/people/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="card tight">
-                <div className="row">
-                  <Avatar person={p} media={state.media} />
-                  <div className="grow">
-                    <div>{p.displayName}</div>
-                    <div className="dim">
-                      {p.context || 'no context recorded'}
-                      {next ? ` · due in ${next.due > now ? formatInterval(next.due - now) : 'now'}` : ''}
-                    </div>
+        <div>
+          {shown.map((p) => {
+            const items = state.items.filter((i) => i.subjectId === p.id)
+            const next = [...items].sort((a, b) => a.due - b.due)[0]
+            const flagged = reencode.some((i) => i.subjectId === p.id)
+            return (
+              <Link
+                key={p.id}
+                to={`/people/${p.id}`}
+                className="row row-rule"
+                style={{
+                  paddingBlock: 'var(--s-3)',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  minBlockSize: 'var(--tap)',
+                }}
+              >
+                <Avatar person={p} media={state.media} />
+                <div className="grow">
+                  <div style={{ fontSize: 'var(--t-lede)', lineHeight: 'var(--lh-lede)' }}>
+                    <PersonName person={p} />
                   </div>
-                  {flagged && <span className="pill warn">re-encode</span>}
+                  <div className="dim">
+                    {p.context || 'no context recorded'}
+                    {next && (
+                      <>
+                        {' · due '}
+                        {next.due > now ? (
+                          <>
+                            in <span className="fig">{formatInterval(next.due - now)}</span>
+                          </>
+                        ) : (
+                          'now'
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Link>
-          )
-        })
+                {/* Neutral, not amber. Eleven cautionary pills down a scroll reads as a wall of
+                    alerts, and needing a better photograph is not an alarming fact about anyone.
+                    The word carries the meaning; the "Needs attention" filter is the affordance. */}
+                {flagged && <span className="pill">re-encode</span>}
+              </Link>
+            )
+          })}
+        </div>
       )}
     </>
   )
