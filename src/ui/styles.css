@@ -1407,3 +1407,165 @@ input[type='file'] {
     background: CanvasText;
   }
 }
+
+/* ── The Long Room ──────────────────────────────────────────────────────────
+   The one full-bleed surface in the app. Everything here obeys the same rules
+   as everything else: zero keyframe animations, one curve, no blurred shadow, no fill
+   that carries state, and no colour that means good or bad.
+
+   The camera is a requestAnimationFrame loop rather than an animation, which
+   is what keeps the zero-keyframes law true while still moving continuously.
+   Under prefers-reduced-motion the loop is CANCELLED, not slowed, and the
+   corridor renders as a still stack — plus a visible pause control, because
+   the media query alone does not discharge WCAG 2.2.2.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.room {
+  position: relative;
+  padding-inline-start: var(--s-4);
+}
+
+/* The corridor is a FRAMED VIEWPORT, not a backdrop. An early pass let the
+   canvas fill the whole screen and the controls floated on top of it, so a
+   bust sat behind the primary button and the page had no ground. Boxing the
+   scene gives the room an edge to be inside of, and gives every control a
+   solid surface to sit on. */
+.room__stage {
+  position: relative;
+  block-size: min(52dvh, 380px);
+  margin-block: var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-1);
+  overflow: hidden;
+}
+
+.room__canvas {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  display: block;
+  /* The crowd is decoration for the screen reader; every interactive thing in
+     this room is a real button in the DOM above it. */
+  pointer-events: none;
+}
+
+/* The shortening rule. The app's own 16px left rule, used as the health bar:
+   it loses a third of its length each time someone walks past unattended.
+   No number, no colour, no counter, and it dies at the run boundary — a rule
+   that gets shorter states a true fact, where a meter that fills would be a
+   charter violation. */
+.room__rule {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: 1;
+  inline-size: 2px;
+  block-size: calc(var(--rule-frac, 1) * 100%);
+  background: var(--accent-edge);
+  /* Discrete. A tween here would read as a meter draining, which is the exact
+     vocabulary the charter bans. */
+  transition: none;
+}
+
+.room__register {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-block: var(--s-3);
+}
+
+.room__controls {
+  position: relative;
+  margin-block-start: var(--s-4);
+}
+
+/* A plate on a plinth. Positioned by projecting its world point to screen, so
+   it is a real <button> the whole way down — keyboard-reachable, readable by a
+   screen reader, and typographically crisp, none of which canvas hit-testing
+   can give you. */
+.plate {
+  position: absolute;
+  z-index: 2;
+  inline-size: 148px;
+  min-block-size: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-1);
+  text-align: start;
+  transform-origin: center;
+  /* Position is driven every frame by the walk loop, so it must not be tweened
+     — a transition here would fight the camera and smear. */
+  transition: none;
+}
+
+.plate:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.plate__img {
+  inline-size: 100%;
+  block-size: 104px;
+  object-fit: cover;
+  border-radius: var(--r-1);
+  display: block;
+}
+
+.plate__context {
+  display: block;
+  min-block-size: 104px;
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink-2);
+}
+
+/* The window, as the plate's own rule retracting from the right. Quantised to
+   eight steps in the component so it steps rather than drains, and it never
+   changes colour — running out of time is not an error. */
+.plate__rule {
+  display: block;
+  block-size: 2px;
+  inline-size: 100%;
+  transform: scaleX(var(--plate-frac, 1));
+  transform-origin: left center;
+  background: var(--line-strong);
+  transition: none;
+}
+
+.cascade {
+  position: relative;
+  padding-block-start: var(--s-5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The corridor stops being a corridor and becomes a list. The plates are laid
+     out in flow rather than projected, so nothing moves at all. */
+  .room__stage {
+    block-size: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+  }
+  .plate {
+    position: static;
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .plate {
+    border: 1px solid CanvasText;
+  }
+  .room__rule,
+  .plate__rule {
+    background: CanvasText;
+  }
+}

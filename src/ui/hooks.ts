@@ -16,6 +16,31 @@ export function useNow(intervalMs = 30_000): number {
   return now
 }
 
+/**
+ * The user's motion preference, live.
+ *
+ * The `change` listener is not optional. A media query read once at mount silently ignores anyone
+ * who turns the preference on mid-session, and the Long Room renders a continuously moving camera
+ * — exactly the case the preference exists for. Note also that this hook alone does not discharge
+ * WCAG 2.2.2 for motion lasting over five seconds: most people never set the OS flag, so anything
+ * using it must ALSO ship a visible, keyboard-reachable pause control.
+ */
+export function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== 'undefined' && 'matchMedia' in window
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false,
+  )
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('matchMedia' in window)) return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const on = (e: MediaQueryListEvent) => setReduced(e.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return reduced
+}
+
 /** A fast clock for anything that counts down inside a single interaction. */
 export function useTicker(active: boolean, intervalMs = 1000): number {
   const [tick, setTick] = useState(0)

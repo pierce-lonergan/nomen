@@ -31,6 +31,7 @@ const SCREENS = [
   ['#/journal', 'journal'],
   ['#/tracks', 'tracks'],
   ['#/settings', 'settings'],
+  ['#/gallery', 'gallery'],
 ]
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined })

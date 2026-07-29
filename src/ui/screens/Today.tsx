@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore, selectPlan, selectStreak } from '../../state/store'
+import { galleryAvailability } from '../../domain/gallery/run'
 import { streakCopy } from '../../domain/engagement/streak'
 import { dayClose } from '../../domain/engagement/rewards'
 import { dayKey, formatInterval } from '../../domain/time'
@@ -102,6 +103,22 @@ export default function Today() {
           didn’t have to schedule.
         </Evidence>
       </div>
+
+      {/* The Long Room. Offered only when the roster is genuinely a crowd — below that it would be
+          a corridor with three plinths, and shipping an empty shell is worse than not offering it.
+          It runs the same due queue through the same grade() call as the plain session. */}
+      {galleryAvailability(state.people).available && plan.queue.queue.length > 0 && (
+        <>
+          <h2>Or walk it</h2>
+          <p className="record-note">
+            The same queue, as a room you walk through. Nothing is revealed until the end of each
+            room. The crowd is staging — sculpted strangers, not faces to learn.
+          </p>
+          <Link to="/gallery" className="btn full">
+            The Long Room
+          </Link>
+        </>
+      )}
 
       {plan.atRisk.length > 0 && (
         <>

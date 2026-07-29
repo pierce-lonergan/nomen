@@ -13,6 +13,7 @@ import PersonDetail from './screens/PersonDetail'
 import Insights from './screens/Insights'
 import Program from './screens/Program'
 import Baseline from './screens/Baseline'
+import Gallery from './screens/Gallery'
 import Journal from './screens/Journal'
 import SettingsScreen from './screens/Settings'
 import Tracks from './screens/Tracks'
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/today" element={<Today />} />
           <Route path="/capture" element={<Capture />} />
           <Route path="/session" element={<Session />} />
+          <Route path="/gallery" element={<Gallery />} />
           <Route path="/people" element={<People />} />
           <Route path="/people/:id" element={<PersonDetail />} />
           <Route path="/tracks" element={<Tracks />} />
