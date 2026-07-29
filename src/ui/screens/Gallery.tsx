@@ -170,15 +170,17 @@ export default function Gallery() {
       // Two ranks per side, staggered in depth, so the corridor has a middle distance rather than
       // a near wall and a far nothing.
       const rank = Math.floor(i / 2)
-      const depth = -(5.5 + rank * 3.4 + (i % 3) * 0.9)
+      // Deeper and further apart than the first pass, which cropped the near heads at the frame
+      // edge and left no middle distance. A corridor has to have a middle distance or it is a
+      // still life of two objects.
+      const depth = -(7.5 + rank * 3.2 + (i % 3) * 0.8)
       return {
         identity,
         lod: (i < 4 ? 0 : i < 10 ? 1 : 2) as 0 | 1 | 2,
-        // Pushed out with depth so the near plinths frame the shot instead of filling it.
-        x: side * (1.5 + rank * 0.1 + (i % 3) * 0.08),
-        y: 1.1 + (i % 3) * 0.09,
+        x: side * (1.75 + rank * 0.14 + (i % 3) * 0.1),
+        y: 1.06 + (i % 3) * 0.07,
         z: depth,
-        scale: 0.62,
+        scale: 0.5,
         // Turned only slightly inward. A bust in three-quarter view still reads as a face; one
         // turned side-on reads as an egg, which is what the first pass looked like.
         yaw: side * (0.06 + (i % 5) * 0.03),
@@ -227,8 +229,10 @@ export default function Gallery() {
       [0, 1.55, camZ.current],
       [0, 1.42, camZ.current - 4],
       readPalette(document.documentElement),
-      6,
-      26,
+      // Fog pulled in: the far crowd should dissolve into the room rather than recede sharply, and
+      // aerial perspective is the only depth cue this scene has beyond scale.
+      4,
+      20,
     )
   }, [crowd])
 

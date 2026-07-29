@@ -148,11 +148,13 @@ export interface RoomShape {
  * a number going up: density, speed, cue withdrawal, foil count, occlusion, and batch size.
  */
 export const ROOM_SHAPES: RoomShape[] = [
-  { targets: 2, busts: 3, windowMs: 5000, railAutoMs: 3500, foils: 0 },
-  { targets: 3, busts: 6, windowMs: 4400, railAutoMs: 3000, foils: 0 },
-  { targets: 3, busts: 10, windowMs: 3800, railAutoMs: 2600, foils: 2 },
-  { targets: 4, busts: 14, windowMs: 3400, railAutoMs: null, foils: 2 },
-  { targets: 4, busts: 18, windowMs: 3000, railAutoMs: null, foils: 3 },
+  // Room one starts at six rather than three: three plinths down a corridor reads as an empty
+  // gallery, and the first ten seconds are where a mode is judged. The escalation is unchanged.
+  { targets: 2, busts: 6, windowMs: 5000, railAutoMs: 3500, foils: 0 },
+  { targets: 3, busts: 9, windowMs: 4400, railAutoMs: 3000, foils: 0 },
+  { targets: 3, busts: 13, windowMs: 3800, railAutoMs: 2600, foils: 2 },
+  { targets: 4, busts: 17, windowMs: 3400, railAutoMs: null, foils: 2 },
+  { targets: 4, busts: 21, windowMs: 3000, railAutoMs: null, foils: 3 },
 ]
 
 export interface RoomPlan extends RoomShape {

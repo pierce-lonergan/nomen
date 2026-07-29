@@ -82,10 +82,25 @@ drawing Gaussians produces a room of siblings, because the mass of a high-dimens
 near its centre. Candidates are then separated by **silhouette** distance, not parameter distance,
 because an outline is most of what survives at 60 px.
 
-Anti-uncanny commitments, held in the geometry: hollow carved sockets and never eyeballs; cranium
-enlarged ~12%; truncation at the clavicle with a clean section cut; **no facial motion, ever** —
-rigid rotation only, since partial facial motion is a documented valley trigger. If the scene needs
-life, the camera moves; the face does not.
+### The heads have no faces, and that is the design
+
+They began as carved busts with deep eye sockets. At full size the sockets read as **gouges** —
+wounds in a lump of stone. That is the uncanny valley reached from the sculptural side rather than
+the photoreal one, and no amount of tuning the falloff fixed it.
+
+Removing the face entirely did. These are milliner's blocks: smooth, blank, unmistakably objects.
+The blank is better on every axis — impossible to make uncanny, far easier to make beautiful, and
+*true*, because these heads are the people you do not know. A head with no face is exactly what
+"someone whose face you have not got" looks like, and it can never be mistaken for a claim that the
+app is teaching you a face.
+
+Identity therefore lives entirely in the **silhouette** — skull width and depth, jaw, face length,
+brow and nose ridge, occiput — which is also the only channel that survives at the 60 px these are
+usually drawn at.
+
+The remaining commitments: cranium enlarged ~12%; truncation at the clavicle with a clean section
+cut; **no facial motion, ever** — rigid rotation only, since partial facial motion is a documented
+valley trigger. If the scene needs life, the camera moves.
 
 ## 5. Accessibility
 

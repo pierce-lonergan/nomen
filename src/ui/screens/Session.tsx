@@ -314,7 +314,10 @@ function Prompt({
   person: Person
   image: { src: string } | null
 }) {
-  if (item.mode === 'FACE_TO_NAME' || item.mode === 'VOICE_TO_NAME') {
+  // FACE_TO_NAME only. A VOICE_TO_NAME prompt showing a photograph is the face drill wearing the
+  // wrong label — it would measure the route it was meant to bypass. The mode cannot be scheduled
+  // until recording exists (see the drill registry), and this branch must not quietly accept it.
+  if (item.mode === 'FACE_TO_NAME') {
     return image ? (
       <img className="face" src={image.src} alt="" />
     ) : (

@@ -35,6 +35,20 @@ export interface DrillDef {
   mechanism: string
   /** True when the drill deliberately loads attention — logged separately in the metrics. */
   dividedAttention: boolean
+  /**
+   * Whether the drill can actually run today.
+   *
+   * This field exists because it was once missing, and the omission produced exactly the failure
+   * this app is built to refuse. Five drills were specified, listed on the Program screen with a
+   * green "unlocked" pill at the right phase, and never able to produce a single scheduled item —
+   * because `capture()` only ever created `MODES_FOR_TRACK[track][0]`. A user reaching Phase 2
+   * around month three was told five new drills had opened and got a byte-for-byte identical
+   * queue, for the rest of the year.
+   *
+   * A drill that is specified but not built is now stated as such, in those words. `notBuilt` is
+   * the honest reason, shown in the UI.
+   */
+  notBuilt?: string
 }
 
 export const DRILLS: DrillDef[] = [
@@ -70,6 +84,8 @@ export const DRILLS: DrillDef[] = [
     mechanism:
       'The left temporal pole is a heteromodal naming hub — it responds near-identically to faces and voices (Waldron et al. 2014; Abel et al. 2015). Training the voice route adds a second way in when the face route stalls.',
     dividedAttention: false,
+    notBuilt:
+      'Recording is not built yet. The schedule mode and this entry exist; the microphone, the playback and the per-person consent indicator do not, so there is nothing to test you against.',
   },
   {
     id: 'NAME_IN_NOISE',
@@ -81,6 +97,8 @@ export const DRILLS: DrillDef[] = [
     mechanism:
       'The underrated cause of name failure is that the name was never accurately perceived. Low-frequency proper names carry no semantic redundancy, so the brain cannot repair them when they are masked. This trains the input stage, not memory.',
     dividedAttention: false,
+    notBuilt:
+      'Built as a baseline instrument, not yet as practice. You can be measured on it from the Baseline battery; you cannot yet train on it.',
   },
   {
     id: 'DIVIDED_ATTENTION',
@@ -103,6 +121,8 @@ export const DRILLS: DrillDef[] = [
     mechanism:
       'Automatization follows a power law of practice (Logan 1988). Full stimulus-driven automaticity is not attainable — every new person is a novel binding — but large speed-ups and reduced felt effort are.',
     dividedAttention: false,
+    notBuilt:
+      'Not built. Latency is already measured on every retrieval and plotted on Insights, but there is no timed run mode yet.',
   },
   {
     id: 'INTERFERENCE',
@@ -114,6 +134,8 @@ export const DRILLS: DrillDef[] = [
     mechanism:
       'Learning many similar names creates proactive interference, and retrieving some names can suppress competitors. Testing has been shown to protect against proactive interference in face–name learning, so the counter to interference is more retrieval, not less exposure.',
     dividedAttention: false,
+    notBuilt:
+      'Not built. Clustering phonologically similar names out of your own roster is the missing piece; without it there is no interference set to test.',
   },
   {
     id: 'CAST_RECALL',
@@ -139,8 +161,50 @@ export const DRILLS: DrillDef[] = [
   },
 ]
 
+/** Drills whose phase gate has opened — including any that are specified but not yet built. */
 export function drillsAvailable(phase: Phase): DrillDef[] {
   return DRILLS.filter((d) => d.minPhase <= phase)
+}
+
+/**
+ * Drills that are phase-unlocked AND can actually put work in your queue tonight.
+ *
+ * This is the list the scheduler reads. `drillsAvailable` is the list the Program screen reads,
+ * because a specified-but-unbuilt drill should still be visible and still be honest about itself.
+ */
+export function drillsLive(phase: Phase): DrillDef[] {
+  return DRILLS.filter((d) => d.minPhase <= phase && !d.notBuilt)
+}
+
+/**
+ * The retrieval modes that should exist for a subject on this track at this phase.
+ *
+ * The scheduler's single source of truth. `MODES_FOR_TRACK` describes what the *type system*
+ * permits; this describes what the app can actually run — and the gap between those two was the
+ * bug.
+ */
+export function modesForPhase(track: TrackKind, phase: Phase): RetrievalMode[] {
+  const seen = new Set<RetrievalMode>()
+  for (const d of drillsLive(phase)) {
+    if (d.track === track) seen.add(d.mode)
+  }
+  return [...seen]
+}
+
+/**
+ * The modes a *particular subject* should have scheduled.
+ *
+ * Phase is necessary but not sufficient: a mode also has to have something to work with. Name →
+ * Face shows the name and asks you to bring up the person, then reveals their photograph — so
+ * without a photograph the reveal is an empty box, which is worse than not offering the drill.
+ * The gate is per-person and per-night rather than global, because a roster is always a mix.
+ */
+export function modesForSubject(
+  track: TrackKind,
+  phase: Phase,
+  hasImages: boolean,
+): RetrievalMode[] {
+  return modesForPhase(track, phase).filter((m) => (m === 'NAME_TO_FACE' ? hasImages : true))
 }
 
 export function nextUnlock(phase: Phase): DrillDef | null {

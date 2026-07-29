@@ -1,4 +1,4 @@
-import { buildBust, type BustMesh, type Lod } from '../bust/mesh'
+import { buildBust, buildFloor, type BustMesh, type Lod } from '../bust/mesh'
 import type { Identity } from '../bust/identity'
 
 /**
@@ -132,6 +132,14 @@ uniform vec3 uFog;
 uniform float uFogNear;
 uniform float uFogFar;
 uniform float uAccent;
+/**
+ * How far a surface sits back toward the room colour before distance fog is applied.
+ *
+ * 0 for the busts, ~0.6 for the floor. It has to be a blend toward uFog rather than a brightness
+ * multiplier: a multiplier darkens absolutely, which recedes correctly on a dark page and makes
+ * the floor a heavy dark slab on a light one. Blending toward the background is theme-symmetric.
+ */
+uniform float uRecede;
 
 out vec4 outColor;
 
@@ -151,6 +159,10 @@ void main() {
   // looked like an eroded rock. Wrapping the signed dot product is the entire difference between
   // a sphere and a face.
   float key = pow(dot(n, L_KEY) * 0.5 + 0.5, 1.9);
+
+  // NO banding. Quantising the terminator was tried and reverted: on a large smooth cranium it
+  // does not read as tool marks, it reads as contour lines on a map. A blank head has almost
+  // nothing but its terminator, so the gradient has to stay clean.
   float fill = pow(dot(n, L_FILL) * 0.5 + 0.5, 2.6);
   // Rim rides the silhouette edge and is weighted to the top, so it reads as a room rather than
   // as an outline traced around the head.
@@ -161,6 +173,7 @@ void main() {
   vec3 c = uStone * ao;
   c += uKey * key * ao;
   c += uFill * fill * ao;
+  c = mix(c, uFog, uRecede);
   c += uRim * rim * (0.3 + 0.7 * uAccent);
 
   // Aerial perspective: the far crowd sinks toward the room colour, which is what gives the
@@ -273,7 +286,7 @@ export class GalleryRenderer {
     gl.deleteShader(fs)
     this.program = program
     this.uniforms = Object.fromEntries(
-      ['uProj', 'uView', 'uModel', 'uStone', 'uKey', 'uFill', 'uRim', 'uFog', 'uFogNear', 'uFogFar', 'uAccent'].map(
+      ['uProj', 'uView', 'uModel', 'uStone', 'uKey', 'uFill', 'uRim', 'uFog', 'uFogNear', 'uFogFar', 'uAccent', 'uRecede'].map(
         (n) => [n, gl.getUniformLocation(program, n)],
       ),
     )
@@ -284,13 +297,13 @@ export class GalleryRenderer {
    * re-upload rather than a re-bake. Regenerating geometry on restore is how a backgrounded tab
    * turns into a two-second freeze.
    */
-  private upload(key: string, identity: Identity, lod: Lod): Upload {
+  private upload(key: string, make: () => BustMesh): Upload {
     const existing = this.uploads.get(key)
     if (existing) return existing
 
     let mesh = this.meshes.get(key)
     if (!mesh) {
-      mesh = buildBust(identity, lod)
+      mesh = make()
       this.meshes.set(key, mesh)
     }
 
@@ -359,11 +372,24 @@ export class GalleryRenderer {
     gl.uniform1f(this.uniforms.uFogNear, fogNear)
     gl.uniform1f(this.uniforms.uFogFar, fogFar)
 
+    // The floor, before anything else — it is the ground the fog gradient runs along, and it is
+    // what turns two objects in a void into a room.
+    const floor = this.upload('floor', () => buildFloor())
+    gl.bindVertexArray(floor.vao)
+    gl.uniformMatrix4fv(this.uniforms.uModel, false, identityM())
+    gl.uniform1f(this.uniforms.uAccent, 0)
+    // In perspective almost all the visible floor sits inside the fog's near plane, so at full
+    // strength it is an unbroken slab that outshouts the busts standing on it. The ground has to
+    // sit under the subject, not compete with it.
+    gl.uniform1f(this.uniforms.uRecede, 0.62)
+    gl.drawElements(gl.TRIANGLES, floor.indexCount, gl.UNSIGNED_SHORT, 0)
+    gl.uniform1f(this.uniforms.uRecede, 0)
+
     // Front-to-back keeps early-Z doing real work on tile-based mobile GPUs.
     const ordered = [...instances].sort((a, b) => b.z - a.z)
     for (const inst of ordered) {
       const key = `${inst.identity.interocular.toFixed(4)}:${inst.identity.gonialAngle.toFixed(4)}:${inst.identity.occiput.toFixed(4)}:${inst.lod}`
-      const up = this.upload(key, inst.identity, inst.lod)
+      const up = this.upload(key, () => buildBust(inst.identity, inst.lod))
       gl.bindVertexArray(up.vao)
       gl.uniformMatrix4fv(
         this.uniforms.uModel,

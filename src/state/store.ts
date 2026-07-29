@@ -17,10 +17,11 @@ import type {
   Settings,
   TrackKind,
 } from '../domain/types'
-import { DEFAULT_SETTINGS, MODES_FOR_TRACK } from '../domain/types'
+import { DEFAULT_SETTINGS } from '../domain/types'
+import { modesForSubject } from '../domain/drills/registry'
 import { dayKey } from '../domain/time'
 import { applyGrade, createItem } from '../domain/scheduler/schedule'
-import { amnesty } from '../domain/scheduler/loadBalancer'
+import { amnesty, promotedOn } from '../domain/scheduler/loadBalancer'
 import { rewardsForAttempt } from '../domain/engagement/rewards'
 import { advanceMission, missionForDay } from '../domain/engagement/missions'
 import { buildDailyPlan, type DailyPlan } from '../domain/program/dailyPlan'
@@ -140,7 +141,7 @@ export const useStore = create<NomenState>((set, get) => ({
 
     // Intake cap: beyond the day's allowance, a new person lands on the roster with their record
     // intact rather than becoming an active item. This is the anti-review-debt rule.
-    const promotedToday = people.filter((p) => p.status === 'ACTIVE' && dayKey(p.metAt) === day).length
+    const promotedToday = promotedOn(people, day)
     const status = promotedToday < settings.intakeCapPerDay ? 'ACTIVE' : 'ROSTER'
 
     const media: MediaRef[] = (draft.imageDataUrls ?? []).map((src) => ({
@@ -164,6 +165,7 @@ export const useStore = create<NomenState>((set, get) => ({
       metAt: now,
       likelihoodOfMeetingAgain: draft.likelihoodOfMeetingAgain,
       status,
+      promotedAt: status === 'ACTIVE' ? now : undefined,
       highValue: draft.likelihoodOfMeetingAgain === 'HIGH',
       role: draft.role,
       collection: draft.collection,
@@ -175,9 +177,12 @@ export const useStore = create<NomenState>((set, get) => ({
     }
     for (const m of media) m.personId = person.id
 
-    // Only the primary mode is scheduled at capture. Name→Face and Voice→Name are added when
-    // their drills unlock, so a new person is one item in the queue, not three.
-    const items = [createItem(uid(), person.id, track, MODES_FOR_TRACK[track][0], now, settings)]
+    // Every mode that is unlocked at this phase AND has something to work with. At Phase 1 that is
+    // exactly one item, so a new person is still one line in the queue; the extra routes arrive
+    // when their drill genuinely opens.
+    const items = modesForSubject(track, settings.phase, media.length > 0).map((mode) =>
+      createItem(uid(), person.id, track, mode, now, settings),
+    )
 
     await repo.putAll('people', [person])
     if (media.length) await repo.putAll('media', media)
@@ -286,8 +291,11 @@ export const useStore = create<NomenState>((set, get) => ({
   async promote(toPromote) {
     const { settings, items } = get()
     const now = Date.now()
-    const newItems = toPromote.map((p) =>
-      createItem(uid(), p.id, p.track, MODES_FOR_TRACK[p.track][0], now, settings),
+    const { media } = get()
+    const newItems = toPromote.flatMap((p) =>
+      modesForSubject(p.track, settings.phase, media.some((m) => m.personId === p.id && m.kind === 'IMAGE')).map(
+        (mode) => createItem(uid(), p.id, p.track, mode, now, settings),
+      ),
     )
     await repo.putAll('people', toPromote)
     await repo.putAll('items', newItems)
@@ -354,10 +362,31 @@ export const useStore = create<NomenState>((set, get) => ({
     set({ settings })
   },
 
+  /**
+   * Advance a phase, and BACKFILL the drills that just opened.
+   *
+   * Without the backfill an unlock is a placard. Existing active people were scheduled under the
+   * old phase, so reaching Phase 2 would announce Name → Face and leave every queue untouched —
+   * which is the defect this whole change exists to close. New modes are created only for people
+   * who can support them, and only where the item does not already exist.
+   */
   async advancePhase(now) {
-    const { settings } = get()
+    const { settings, people, items, media } = get()
     const next = Math.min(4, settings.phase + 1) as Settings['phase']
     await get().updateSettings({ phase: next, phaseEnteredAt: now })
+
+    const existing = new Set(items.map((i) => `${i.subjectId}:${i.mode}`))
+    const backfill = people
+      .filter((p) => p.status === 'ACTIVE')
+      .flatMap((p) =>
+        modesForSubject(p.track, next, media.some((m) => m.personId === p.id && m.kind === 'IMAGE'))
+          .filter((mode) => !existing.has(`${p.id}:${mode}`))
+          .map((mode) => createItem(uid(), p.id, p.track, mode, now, settings)),
+      )
+    if (backfill.length === 0) return
+
+    await repo.putAll('items', backfill)
+    set((s) => ({ items: [...s.items, ...backfill] }))
   },
 
   async removePerson(personId) {

@@ -98,7 +98,7 @@ export function promotionCandidates(
       return w !== 0 ? w : a.metAt - b.metAt
     })
     .slice(0, slots)
-    .map((p) => ({ ...p, status: 'ACTIVE' as const, metAt: p.metAt || now }))
+    .map((p) => ({ ...p, status: 'ACTIVE' as const, metAt: p.metAt || now, promotedAt: now }))
 }
 
 /**
@@ -139,7 +139,14 @@ export function amnesty(
   })
 }
 
-/** How many people were promoted on a given local day — used to enforce the intake cap. */
+/**
+ * How many people entered rotation on a given local day — the intake cap's denominator.
+ *
+ * Counts `promotedAt`, falling back to `metAt` for records written before that field existed (a
+ * person captured straight into ACTIVE is promoted the moment they are met, so the fallback is
+ * exact rather than approximate). Counting `metAt` alone was the leak: it made a person met last
+ * Tuesday free to promote today, so the cap only ever bound within the day of the encounter.
+ */
 export function promotedOn(people: Person[], day: string): number {
-  return people.filter((p) => p.status !== 'ROSTER' && dayKey(p.metAt) === day).length
+  return people.filter((p) => p.status !== 'ROSTER' && dayKey(p.promotedAt ?? p.metAt) === day).length
 }

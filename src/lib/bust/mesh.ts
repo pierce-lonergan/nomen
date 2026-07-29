@@ -12,9 +12,20 @@ import type { Identity } from './identity'
  * rather than style. So fidelity is held *uniform and low* on purpose, and five rules are enforced
  * here in the geometry rather than left to the shader:
  *
- *  1. **Hollow carved sockets, never eyeballs.** This is the classical bust solution. It is
- *     unambiguously sculptural, and it is immune to the wrong-gaze-vector failure that makes a
- *     rendered eye read as dead. There is no sclera, no iris and no corneal highlight anywhere.
+ *  1. **No face at all.** Not stylised eyes, not carved sockets — nothing. These are milliner's
+ *     blocks: smooth, blank, unmistakably objects.
+ *
+ *     This started as deeply carved sockets, and at full size they read as *gouges* — wounds in a
+ *     lump of stone. That is the valley, arrived at from the sculptural side rather than the
+ *     photoreal one. Dropping the face entirely fixed it, and the blank turns out to be better on
+ *     every axis: it is impossible to make uncanny, it is far easier to make beautiful, and it is
+ *     *true*. These heads are the people you do not know. A head with no face is exactly what
+ *     "someone whose face you have not got" looks like, and it can never be mistaken for a claim
+ *     that the app is teaching you a face.
+ *
+ *     Identity therefore lives entirely in the SILHOUETTE — skull width and depth, jaw, face
+ *     length, brow and nose ridge, occiput — which is also the only channel that survives at the
+ *     60px these are usually drawn at.
  *  2. **The cranium is enlarged ~12%.** Away from human proportion, toward the maquette.
  *  3. **Truncation at the clavicle, with a clean section cut.** A head that ends in a flat plane
  *     is obviously an object. A head that fades out is a ghost.
@@ -66,37 +77,27 @@ function smooth(t: number): number {
  * floats instead of the ~300KB a quantised blendshape basis would need.
  */
 function featuresFor(id: Identity): Feature[] {
-  const eyeX = 0.3 + id.interocular * 0.022
-  const eyeY = 0.05 + id.eyeHeight * 0.02
+  // Amplitudes are deliberately small. See the note above on why this is a blank.
+  const g = 1.0
   return [
-    // Brow ridge — one wide bar, the single strongest cue to a "carved" reading.
-    { at: [0, eyeY + 0.2 + id.eyeBrowGap * 0.015, 0.92], spread: 0.55, amp: 0.1 + id.foreheadSlope * 0.025 },
-    // Eye sockets, carved hollow, and carved DEEP. Shadow does the work an eyeball would, so if
-    // these are shallow the whole head reads as an egg — which is exactly what the first pass did.
-    { at: [-eyeX, eyeY, 0.9], spread: 0.27, amp: -(0.17 + id.eyeDepth * 0.03) },
-    { at: [eyeX, eyeY, 0.9], spread: 0.27, amp: -(0.17 + id.eyeDepth * 0.03) },
-    // Nose: bridge, then tip, then flare. The single most identifying projection on a silhouette.
-    { at: [0, eyeY - 0.04, 1], spread: 0.22, amp: 0.12 + id.noseBridge * 0.03 },
-    { at: [0, -0.16 - id.nasionToSubnasale * 0.025, 1], spread: 0.14, amp: 0.2 + id.noseTip * 0.045 },
-    { at: [0, -0.25, 0.97], spread: 0.16, amp: 0.075 + id.nostrilFlare * 0.028 },
-    // Cheekbones — the widest thing on a face at distance, so they carry the silhouette.
-    { at: [-0.7, -0.04, 0.55], spread: 0.4, amp: 0.075 + id.zygoProjection * 0.04 },
-    { at: [0.7, -0.04, 0.55], spread: 0.4, amp: 0.075 + id.zygoProjection * 0.04 },
-    // Mouth: a shallow trough, then the lips sitting in it.
-    { at: [0, -0.4 - id.philtrum * 0.02, 0.92], spread: 0.26, amp: -0.06 },
-    { at: [0, -0.38 - id.philtrum * 0.02, 0.96], spread: 0.15, amp: 0.045 + id.lipFullness * 0.03 },
-    // Chin and jaw corners.
-    { at: [0, -0.7 - id.lipToMenton * 0.025, 0.62], spread: 0.3, amp: 0.085 + id.chinRound * 0.035 },
-    { at: [-0.76, -0.5, 0.28], spread: 0.36, amp: 0.055 + id.gonialAngle * 0.035 },
-    { at: [0.76, -0.5, 0.28], spread: 0.36, amp: 0.055 + id.gonialAngle * 0.035 },
-    // Occiput — invisible from the front, but it is most of the profile silhouette.
-    { at: [0, 0.12, -1], spread: 0.6, amp: 0.06 + id.occiput * 0.035 },
-    // Temples, carved in. This is what separates a skull from an egg, so it is not subtle either.
-    { at: [-0.93, 0.34, 0.14], spread: 0.3, amp: -0.04 },
-    { at: [0.93, 0.34, 0.14], spread: 0.3, amp: -0.04 },
-    // The eye-socket bridge: a ridge between the sockets, or the two hollows merge into one band
-    // across the face and it stops reading as a pair of eyes.
-    { at: [0, eyeY + 0.02, 0.99], spread: 0.1, amp: 0.05 },
+    // A soft brow plane, where a hat brim would sit. Enough to give the forehead a front.
+    { at: [0, 0.26, 0.9], spread: 0.6, amp: g * (0.03 + id.foreheadSlope * 0.012) },
+    // The nose is a RIDGE, not a protrusion — the low relief a wooden block is carved with, and
+    // the one feature that still tells two silhouettes apart in profile.
+    { at: [0, 0.0, 1], spread: 0.34, amp: g * (0.035 + id.noseBridge * 0.015) },
+    { at: [0, -0.16 - id.nasionToSubnasale * 0.02, 1], spread: 0.2, amp: g * (0.055 + id.noseTip * 0.02) },
+    // Cheek planes. Broad and shallow: these carry the width of the head at distance.
+    { at: [-0.72, -0.05, 0.5], spread: 0.5, amp: g * (0.035 + id.zygoProjection * 0.022) },
+    { at: [0.72, -0.05, 0.5], spread: 0.5, amp: g * (0.035 + id.zygoProjection * 0.022) },
+    // Chin and jaw corners — the lower silhouette.
+    { at: [0, -0.68 - id.lipToMenton * 0.02, 0.6], spread: 0.4, amp: g * (0.05 + id.chinRound * 0.025) },
+    { at: [-0.76, -0.5, 0.26], spread: 0.42, amp: g * (0.035 + id.gonialAngle * 0.025) },
+    { at: [0.76, -0.5, 0.26], spread: 0.42, amp: g * (0.035 + id.gonialAngle * 0.025) },
+    // Occiput — invisible from the front and most of the profile.
+    { at: [0, 0.12, -1], spread: 0.62, amp: g * (0.04 + id.occiput * 0.028) },
+    // NO temple carve. A tight negative anchor on the side of a smooth skull does not read as a
+    // temple, it reads as a chip out of the object — the one visible defect left after the blank
+    // heads landed. The skull is kept from being an egg by proportion instead, in baseRadius.
   ]
 }
 
@@ -177,7 +178,14 @@ export function buildBust(id: Identity, lod: Lod = 0): BustMesh {
         const a = normalise(f.at)
         const dot = dx * a[0] + dy * a[1] + dz * a[2]
         const angle = Math.acos(Math.min(1, Math.max(-1, dot)))
-        if (angle < f.spread) disp += f.amp * smooth(1 - angle / f.spread)
+        if (angle < f.spread) {
+          // Squared smoothstep, not plain smoothstep. A linear-ish falloff spreads every feature
+          // into its neighbours and the head melts into a weathered lump — the socket bleeds into
+          // the cheek, the nose into the lip. Squaring tightens the footprint around the anchor
+          // while keeping the peak, which is the difference between carved and eroded.
+          const w = smooth(1 - angle / f.spread)
+          disp += f.amp * w * w
+        }
       }
       x += dx * disp
       y += dy * disp
@@ -281,11 +289,32 @@ export function buildBust(id: Identity, lod: Lod = 0): BustMesh {
       // brow) negative, where the clamp brightens them.
       const sphere = (Math.PI * Math.PI) / 4 / (segV * segV)
       const concavity = cavity / sphere + 1
-      // 0.28/0.25 measured: full tonal range with nothing crushed. At 0.42/0.12, thirty per
-      // cent of vertices clipped to the floor and the face read as dark blotches.
-      occlusion[idx] = Math.min(1, Math.max(0.25, 1 - concavity * 0.28))
+      // Gentle, now that the heads are blank. Overlapping feature anchors leave small ridges whose
+      // curvature spikes on a handful of vertices, and at higher strength those showed up as hard
+      // dark diamonds — chips in the object rather than shading.
+      occlusion[idx] = Math.min(1, Math.max(0.55, 1 - concavity * 0.16))
     }
   }
+
+  // One smoothing pass over the bake. Curvature is a second derivative, so it is noisy by nature
+  // and isolated spikes read as defects on an otherwise flawless surface. Averaging each vertex
+  // with its four neighbours costs one pass and removes them without touching the broad gradients.
+  const smoothed = Float32Array.from(occlusion)
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      const wrap = (k: number) => ((k % segU) + segU) % segU
+      const up = Math.max(0, j - 1)
+      const down = Math.min(rows - 1, j + 1)
+      smoothed[j * cols + i] =
+        (occlusion[j * cols + i] * 2 +
+          occlusion[j * cols + wrap(i + 1)] +
+          occlusion[j * cols + wrap(i - 1)] +
+          occlusion[up * cols + i] +
+          occlusion[down * cols + i]) /
+        6
+    }
+  }
+  occlusion.set(smoothed)
 
   // ── Indices ─────────────────────────────────────────────────────────────────────────────────
   const indices = new Uint16Array(segU * segV * 6)
@@ -342,4 +371,24 @@ export function bustSilhouettePath(id: Identity, size = 100): string {
   for (let b = BANDS - 1; b >= 0; b--) if (Number.isFinite(right[b])) pts.push(`${px(right[b]).toFixed(1)},${py(b).toFixed(1)}`)
   for (let b = 0; b < BANDS; b++) if (Number.isFinite(left[b])) pts.push(`${px(left[b]).toFixed(1)},${py(b).toFixed(1)}`)
   return `M ${pts.join(' L ')} Z`
+}
+
+/**
+ * The floor.
+ *
+ * One quad. Without it the busts float in a void and the corridor is a still life of two objects
+ * rather than a place — and depth in this scene is carried almost entirely by the fog gradient,
+ * which needs a surface to run along. It rides the same shader as the heads: a horizontal normal,
+ * full occlusion, and the aerial-perspective term does the rest.
+ */
+export function buildFloor(halfWidth = 14, near = 2, far = 46): BustMesh {
+  const positions = new Float32Array([
+    -halfWidth, 0, near, halfWidth, 0, near, halfWidth, 0, -far, -halfWidth, 0, -far,
+  ])
+  const normals = new Float32Array([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0])
+  const occlusion = new Float32Array([1, 1, 1, 1])
+  // Counter-clockwise seen from ABOVE. The first attempt wound the other way, so the quad's
+  // normal pointed at the basement and back-face culling ate the entire floor silently.
+  const indices = new Uint16Array([0, 1, 2, 0, 2, 3])
+  return { positions, normals, occlusion, indices, vertexCount: 4 }
 }

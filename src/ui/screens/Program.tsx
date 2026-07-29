@@ -148,15 +148,21 @@ export default function Program() {
       )}
 
       <h2>Drills</h2>
+      {/* Three states, not two. A drill whose phase gate has opened but which is not built gets a
+          neutral pill and says so in words — a green "unlocked" badge on a drill that cannot put a
+          single item in your queue is exactly the overstatement this app refuses everywhere else. */}
       {unlocked.map((d) => (
         <section key={d.id} className="row-rule" style={{ paddingBlockEnd: 'var(--s-5)', marginBlockEnd: 'var(--s-5)' }}>
           <div className="row between">
             <h3 style={{ margin: 0 }}>{d.name}</h3>
-            <span className="pill good">unlocked</span>
+            <span className={d.notBuilt ? 'pill' : 'pill good'}>
+              {d.notBuilt ? 'not built yet' : 'in your queue'}
+            </span>
           </div>
           <p className="muted" style={{ margin: 'var(--s-2) 0 0' }}>
             {d.purpose}
           </p>
+          {d.notBuilt && <p className="record-note">{d.notBuilt}</p>}
           <Evidence>{d.mechanism}</Evidence>
         </section>
       ))}

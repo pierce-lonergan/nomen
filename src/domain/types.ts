@@ -112,6 +112,17 @@ export interface Person {
   /** Where you met / what work this character does / what region this place is in. */
   context?: string
   metAt: number
+  /**
+   * When this person entered active rotation, which is NOT when you met them.
+   *
+   * The intake cap used to be enforced by counting people whose `metAt` fell on today. Promotion
+   * preserves `metAt` — correctly, it is a fact about the encounter — so promoting anyone met on
+   * an earlier day never incremented today's counter, and the cap could be defeated simply by
+   * tapping "bring into rotation" repeatedly. The wedding case the cap exists for held on the day
+   * of the wedding and collapsed the morning after. Optional because records written before this
+   * field existed fall back to `metAt`.
+   */
+  promotedAt?: number
   likelihoodOfMeetingAgain: MeetAgainLikelihood
   status: PersonStatus
   /** Flagged for the offline imagery workshop — deliberately a small set. */
