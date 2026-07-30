@@ -4,10 +4,11 @@ import { useStore } from '../../state/store'
 import { isHuman } from '../../domain/types'
 import { currentIntervalLabel } from '../../domain/scheduler/schedule'
 import { formatInterval } from '../../domain/time'
-import { filesToDataUrls } from '../../lib/image'
+import { filesToBlobs } from '../../lib/image'
 import { useNow } from '../hooks'
 import { Evidence, FaceConfidenceBadge, Header, PersonName, Stat } from '../components'
 import { IconBack } from '../icons'
+import { mediaSrc } from '../../lib/media'
 
 /**
  * One person's record.
@@ -100,7 +101,7 @@ export default function PersonDetail() {
               <img
                 key={m.id}
                 className="face"
-                src={m.src}
+                src={mediaSrc(m)}
                 alt=""
                 style={{ inlineSize: 96, flex: '0 0 auto' }}
               />
@@ -137,8 +138,8 @@ export default function PersonDetail() {
               accept="image/*"
               multiple
               onChange={async (e) => {
-                const urls = await filesToDataUrls(e.target.files)
-                if (urls.length === 0) return
+                const blobs = await filesToBlobs(e.target.files)
+                if (blobs.length === 0) return
                 await state.addEncounter(
                   person.id,
                   {
@@ -151,7 +152,7 @@ export default function PersonDetail() {
                       stress: 2,
                       setting: person.context ?? '',
                     },
-                    imageDataUrls: urls,
+                    imageBlobs: blobs,
                   },
                   Date.now(),
                 )

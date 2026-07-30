@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { selectPlan, useStore } from '../../state/store'
-import type { CueLevel, Grade, Person, ScheduleItem } from '../../domain/types'
+import type { CueLevel, Grade, MediaRef, Person, ScheduleItem } from '../../domain/types'
 import { INSTANT_THRESHOLD_MS, isHuman } from '../../domain/types'
 import { buildCue, easeCue } from '../../domain/scheduler/cueLadder'
 import { competenceFeedback } from '../../domain/engagement/rewards'
@@ -9,6 +9,7 @@ import { nextDrillImage } from '../../domain/faceVariety'
 import { currentIntervalLabel } from '../../domain/scheduler/schedule'
 import { useNow, useTicker } from '../hooks'
 import { Empty, Evidence, Header, PersonName } from '../components'
+import { mediaSrc } from '../../lib/media'
 
 /**
  * The session loop — and the reveal, which is the emotional core of the application.
@@ -202,7 +203,7 @@ export default function Session() {
                 <>
                   {item.mode === 'NAME_TO_FACE' && image ? (
                     <>
-                      <img className="face" src={image.src} alt="" />
+                      <img className="face" src={mediaSrc(image)} alt="" />
                       {/* The image IS the answer here, and alt="" leaves the live region with
                           nothing to announce. The name is the non-visual equivalent. */}
                       <p className="sr-only">{person.displayName}</p>
@@ -312,14 +313,14 @@ function Prompt({
 }: {
   item: ScheduleItem
   person: Person
-  image: { src: string } | null
+  image: MediaRef | null
 }) {
   // FACE_TO_NAME only. A VOICE_TO_NAME prompt showing a photograph is the face drill wearing the
   // wrong label — it would measure the route it was meant to bypass. The mode cannot be scheduled
   // until recording exists (see the drill registry), and this branch must not quietly accept it.
   if (item.mode === 'FACE_TO_NAME') {
     return image ? (
-      <img className="face" src={image.src} alt="" />
+      <img className="face" src={mediaSrc(image)} alt="" />
     ) : (
       <div className="face-placeholder">
         {/* Deliberately not naming them — that would be the answer. */}

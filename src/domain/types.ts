@@ -143,8 +143,20 @@ export interface MediaRef {
   kind: 'IMAGE' | 'AUDIO'
   encounterId: Id
   capturedAt: number
-  /** Object URL / data URL. Blobs live in the media store; never leaves the device. */
-  src: string
+  /**
+   * The bytes. Stored as a Blob so the library is a list of handles rather than megabytes of
+   * base64 live in the JS heap — see `src/lib/media.ts`. Never leaves the device.
+   */
+  blob?: Blob
+  /**
+   * Legacy base64 data URL, written by v0.1 and by older exports.
+   *
+   * Kept readable rather than dropped: migration is incremental and a record that has not been
+   * converted yet must still display. Use `mediaSrc()` and never read this field directly.
+   */
+  src?: string
+  /** Seconds — audio only, so a clip's length can be shown without decoding it. */
+  durationMs?: number
 }
 
 // ── Scheduling ────────────────────────────────────────────────────────────────

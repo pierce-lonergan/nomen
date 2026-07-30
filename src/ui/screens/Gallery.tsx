@@ -22,6 +22,7 @@ import { GalleryRenderer, webglAvailable, type BustInstance } from '../../lib/gl
 import { playConfirm, playMiss, playPass, playRailedStamp, playStamp, playTick, primeAudio, suspendAudio, type SfxLevel } from '../../lib/sfx'
 import { useNow, usePrefersReducedMotion } from '../hooks'
 import { Empty, Evidence, Header, PersonName } from '../components'
+import { mediaSrc } from '../../lib/media'
 
 /**
  * THE LONG ROOM.
@@ -670,7 +671,7 @@ export default function Gallery() {
  */
 function PlateFace({ person, media }: { person: Person; media: Parameters<typeof nextDrillImage>[1] }) {
   const image = nextDrillImage(person, media, null)
-  if (image) return <img className="plate__img" src={image.src} alt="" />
+  if (image) return <img className="plate__img" src={mediaSrc(image)} alt="" />
   return (
     <span className="plate__context">
       {person.context || 'no record of where'}

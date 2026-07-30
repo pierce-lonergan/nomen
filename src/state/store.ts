@@ -53,7 +53,7 @@ export interface CaptureDraft {
   track?: TrackKind
   role?: string
   collection?: string
-  imageDataUrls?: string[]
+  imageBlobs?: Blob[]
 }
 
 interface NomenState {
@@ -72,7 +72,7 @@ interface NomenState {
 
   load: () => Promise<void>
   capture: (draft: CaptureDraft, now: number) => Promise<Person>
-  addEncounter: (personId: string, draft: Pick<CaptureDraft, 'setting' | 'adherence' | 'context' | 'imageDataUrls'>, now: number) => Promise<void>
+  addEncounter: (personId: string, draft: Pick<CaptureDraft, 'setting' | 'adherence' | 'context' | 'imageBlobs'>, now: number) => Promise<void>
   grade: (itemId: string, grade: Grade, latencyMs: number, cueUsed: CueLevel, dividedAttention: boolean, now: number) => Promise<void>
   promote: (people: Person[]) => Promise<void>
   runAmnesty: (days: number, now: number) => Promise<void>
@@ -131,6 +131,17 @@ export const useStore = create<NomenState>((set, get) => ({
       settings: await repo.loadSettings(),
       loaded: true,
     })
+
+    // Convert any base64 media left by v0.1, a slice at a time and after first paint. Anything not
+    // yet converted still displays — `mediaSrc()` falls back to the legacy string — so this is a
+    // storage upgrade the user never sees, rather than a blocking migration on launch.
+    void (async () => {
+      let guard = 0
+      while ((await repo.migrateLegacyMedia()) > 0 && guard++ < 200) {
+        await new Promise((r) => setTimeout(r, 0))
+      }
+      if (guard > 0) set({ media: await (await repo.db()).getAll('media') })
+    })()
   },
 
   async capture(draft, now) {
@@ -144,13 +155,13 @@ export const useStore = create<NomenState>((set, get) => ({
     const promotedToday = promotedOn(people, day)
     const status = promotedToday < settings.intakeCapPerDay ? 'ACTIVE' : 'ROSTER'
 
-    const media: MediaRef[] = (draft.imageDataUrls ?? []).map((src) => ({
+    const media: MediaRef[] = (draft.imageBlobs ?? []).map((blob) => ({
       id: uid(),
       personId: '',
       kind: 'IMAGE' as const,
       encounterId,
       capturedAt: now,
-      src,
+      blob,
     }))
 
     const person: Person = {
@@ -184,13 +195,17 @@ export const useStore = create<NomenState>((set, get) => ({
       createItem(uid(), person.id, track, mode, now, settings),
     )
 
-    await repo.putAll('people', [person])
-    if (media.length) await repo.putAll('media', media)
-    if (status === 'ACTIVE') await repo.putAll('items', items)
-
     const today = { ...(get().days.find((x) => x.day === day) ?? emptyDay(day)) }
     today.newPeople += 1
-    await repo.putAll('days', [today])
+
+    // A person, their photographs, their schedule and the day's tally are one fact about one
+    // introduction. Half of it is worse than none of it.
+    await repo.transact([
+      { store: 'people', values: [person] },
+      { store: 'media', values: media },
+      { store: 'items', values: status === 'ACTIVE' ? items : [] },
+      { store: 'days', values: [today] },
+    ])
 
     set((s) => ({
       people: [...s.people, person],
@@ -205,13 +220,13 @@ export const useStore = create<NomenState>((set, get) => ({
     const person = get().people.find((p) => p.id === personId)
     if (!person) return
     const encounterId = uid()
-    const media: MediaRef[] = (draft.imageDataUrls ?? []).map((src) => ({
+    const media: MediaRef[] = (draft.imageBlobs ?? []).map((blob) => ({
       id: uid(),
       personId,
       kind: 'IMAGE' as const,
       encounterId,
       capturedAt: now,
-      src,
+      blob,
     }))
     const updated: Person = {
       ...person,
@@ -221,8 +236,10 @@ export const useStore = create<NomenState>((set, get) => ({
       ],
       imageMediaIds: [...person.imageMediaIds, ...media.map((m) => m.id)],
     }
-    await repo.putAll('people', [updated])
-    if (media.length) await repo.putAll('media', media)
+    await repo.transact([
+      { store: 'people', values: [updated] },
+      { store: 'media', values: media },
+    ])
     set((s) => ({
       people: s.people.map((p) => (p.id === personId ? updated : p)),
       media: [...s.media, ...media],
@@ -274,10 +291,18 @@ export const useStore = create<NomenState>((set, get) => ({
         ? advanceMission(mission)
         : mission
 
-    await repo.putAll('items', [outcome.item])
-    await repo.putAll('attempts', [attempt])
-    await repo.putAll('days', [today])
-    if (updatedMission && updatedMission !== mission) await repo.putAll('missions', [updatedMission])
+    // ONE transaction. As four separate writes, a crash between any two left an attempt recorded
+    // against an item whose interval never advanced — silently corrupting both the schedule and
+    // the recall metrics, with no error raised anywhere.
+    await repo.transact([
+      { store: 'items', values: [outcome.item] },
+      { store: 'attempts', values: [attempt] },
+      { store: 'days', values: [today] },
+      {
+        store: 'missions',
+        values: updatedMission && updatedMission !== mission ? [updatedMission] : [],
+      },
+    ])
 
     set((s) => ({
       items: s.items.map((i) => (i.id === itemId ? outcome.item : i)),
@@ -297,8 +322,10 @@ export const useStore = create<NomenState>((set, get) => ({
         (mode) => createItem(uid(), p.id, p.track, mode, now, settings),
       ),
     )
-    await repo.putAll('people', toPromote)
-    await repo.putAll('items', newItems)
+    await repo.transact([
+      { store: 'people', values: toPromote },
+      { store: 'items', values: newItems },
+    ])
     set((s) => ({
       people: s.people.map((p) => toPromote.find((q) => q.id === p.id) ?? p),
       items: [...items, ...newItems],
@@ -329,8 +356,10 @@ export const useStore = create<NomenState>((set, get) => ({
       mission.kind === 'USE_NAME_ALOUD' || mission.kind === 'RECONFIRM' ? advanceMission(mission) : mission
     today.missionCompleted = advanced.completed
 
-    await repo.putAll('days', [today])
-    await repo.putAll('missions', [advanced])
+    await repo.transact([
+      { store: 'days', values: [today] },
+      { store: 'missions', values: [advanced] },
+    ])
     set((s) => ({
       days: [...s.days.filter((x) => x.day !== day), today],
       missions: [...s.missions.filter((m) => m.id !== advanced.id), advanced],

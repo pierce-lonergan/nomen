@@ -60,6 +60,7 @@ export default function SettingsScreen() {
   const [theme, setTheme, resolved] = useTheme()
   const [confirmWipe, setConfirmWipe] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
 
   async function doExport() {
     const bundle = await exportAll(Date.now())
@@ -183,11 +184,33 @@ export default function SettingsScreen() {
               const file = e.target.files?.[0]
               if (!file) return
               setBusy('Importing…')
-              const bundle = JSON.parse(await file.text()) as ExportBundle
-              await state.replaceAll(bundle)
-              setBusy(null)
+              setImportError(null)
+              try {
+                // Both halves can fail on a file a user picked by hand: JSON.parse on anything
+                // that is not JSON, and validateBundle on JSON that is not an export. Unhandled,
+                // either one left the spinner running forever with no explanation.
+                const bundle = JSON.parse(await file.text()) as ExportBundle
+                await state.replaceAll(bundle)
+              } catch (err) {
+                setImportError(
+                  err instanceof SyntaxError
+                    ? 'That file is not valid JSON, so it cannot be a Nomen export.'
+                    : err instanceof Error
+                      ? err.message
+                      : 'That import could not be read.',
+                )
+              } finally {
+                setBusy(null)
+                e.target.value = ''
+              }
             }}
           />
+          {/* A refusal is an answer, so it is stated at full strength rather than whispered. */}
+          {importError && <p className="record-note">{importError}</p>}
+          <p className="record-note">
+            Nothing is written unless the whole file checks out. An import replaces everything in
+            one transaction, so a bad file leaves your data exactly as it was.
+          </p>
         </div>
       </div>
 

@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore, type CaptureDraft } from '../../state/store'
 import type { MeetAgainLikelihood, NoiseLevel, Person, ProtocolAdherence } from '../../domain/types'
-import { filesToDataUrls } from '../../lib/image'
+import { filesToBlobs } from '../../lib/image'
 import { Chips, Evidence, Header, PersonName } from '../components'
 import { IconCheck, IconCircle } from '../icons'
 
@@ -67,7 +67,9 @@ export default function Capture() {
   const [alcohol, setAlcohol] = useState(false)
   const [fatigue, setFatigue] = useState(2)
   const [stress, setStress] = useState(2)
-  const [images, setImages] = useState<string[]>([])
+  const [images, setImages] = useState<Blob[]>([])
+  const previews = useMemo(() => images.map((b) => URL.createObjectURL(b)), [images])
+  useEffect(() => () => previews.forEach(URL.revokeObjectURL), [previews])
   const [saved, setSaved] = useState<Person | null>(null)
   const [showContext, setShowContext] = useState(false)
   /* The file input is visually hidden so the visible control can be a real button. It is still in
@@ -87,7 +89,7 @@ export default function Capture() {
       likelihoodOfMeetingAgain: likelihood,
       adherence,
       context: { noise, alcohol, fatigue, stress, setting: setting.trim() },
-      imageDataUrls: images,
+      imageBlobs: images,
     }
     const person = await state.capture(draft, now)
     setSaved(person)
@@ -250,7 +252,7 @@ export default function Capture() {
             type="file"
             accept="image/*"
             multiple
-            onChange={async (e) => setImages(await filesToDataUrls(e.target.files))}
+            onChange={async (e) => setImages(await filesToBlobs(e.target.files))}
             style={{
               position: 'absolute',
               inset: 0,
@@ -270,8 +272,11 @@ export default function Capture() {
         </label>
         {images.length > 0 && (
           <div className="row wrap" style={{ marginBlockStart: 'var(--s-3)' }}>
-            {images.map((src) => (
-              <img key={src} src={src} alt="" className="avatar" />
+            {/* Previews are minted here and revoked when the draft is discarded — an object URL
+                pins its Blob until it is released, so a capture flow that mints per render leaks
+                every photograph the user browses past. */}
+            {previews.map((url: string) => (
+              <img key={url} src={url} alt="" className="avatar" />
             ))}
           </div>
         )}

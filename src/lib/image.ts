@@ -9,7 +9,7 @@
 const MAX_EDGE = 512
 const QUALITY = 0.82
 
-export async function fileToDownscaledDataUrl(file: File): Promise<string> {
+export async function fileToDownscaledBlob(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file)
   const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height))
   const width = Math.round(bitmap.width * scale)
@@ -23,10 +23,18 @@ export async function fileToDownscaledDataUrl(file: File): Promise<string> {
   ctx.drawImage(bitmap, 0, 0, width, height)
   bitmap.close()
 
-  return canvas.toDataURL('image/jpeg', QUALITY)
+  // toBlob, not toDataURL. The canvas can hand back compressed bytes directly; going via base64
+  // costs a 33% inflation and puts every photograph in the JS heap as a string.
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('Could not encode that image'))),
+      'image/jpeg',
+      QUALITY,
+    )
+  })
 }
 
-export async function filesToDataUrls(files: FileList | null): Promise<string[]> {
+export async function filesToBlobs(files: FileList | null): Promise<Blob[]> {
   if (!files) return []
-  return Promise.all(Array.from(files).map(fileToDownscaledDataUrl))
+  return Promise.all(Array.from(files).map(fileToDownscaledBlob))
 }

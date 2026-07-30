@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { isHuman, type MediaRef, type Person } from '../domain/types'
 import { confidenceCeiling, FACE_CONFIDENCE_COPY } from '../domain/faceVariety'
 import { IconBack } from './icons'
+import { mediaSrc } from '../lib/media'
 
 export function Avatar({ person, media }: { person: Person; media: MediaRef[] }) {
   const img = media.find((m) => m.personId === person.id && m.kind === 'IMAGE')
@@ -13,7 +14,7 @@ export function Avatar({ person, media }: { person: Person; media: MediaRef[] })
       </div>
     )
   }
-  return <img className="avatar" src={img.src} alt="" />
+  return <img className="avatar" src={mediaSrc(img)} alt="" />
 }
 
 /**
