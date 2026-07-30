@@ -65,9 +65,13 @@ describe('a drill that says "unlocked" can actually put work in the queue', () =
     expect(p2.length).toBeGreaterThan(p1.length)
   })
 
-  it('never schedules voice until recording exists', () => {
+  it('never bulk-schedules voice from a phase — consent is given one person at a time', () => {
+    // Recording exists now, so Voice → Name is a live drill and appears in the phase list. What
+    // must never happen is a phase advance minting voice items across the roster: a recording of
+    // someone's voice is consented to per person, at the moment it is taken, and that cannot be
+    // inferred from reaching Phase 2. Items are created only by addVoiceClip.
     for (const phase of [0, 1, 2, 3, 4] as Phase[]) {
-      expect(modesForPhase('PERSON', phase)).not.toContain('VOICE_TO_NAME')
+      expect(modesForSubject('PERSON', phase, true)).not.toContain('VOICE_TO_NAME')
     }
   })
 

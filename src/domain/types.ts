@@ -298,6 +298,10 @@ export interface Settings {
   baselineVerdict?: BaselineVerdict
   /** Explicitly opted into voice capture; recording is never silent. */
   voiceCaptureEnabled: boolean
+  /** Explicitly opted into review nudges. Off by default — see `src/lib/notify.ts`. */
+  notificationsEnabled: boolean
+  /** `YYYY-MM-DD` of the last nudge shown. At most one per day, ever. */
+  lastNudgeDay?: string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -309,4 +313,5 @@ export const DEFAULT_SETTINGS: Settings = {
   phase: 0,
   phaseEnteredAt: 0,
   voiceCaptureEnabled: false,
+  notificationsEnabled: false,
 }

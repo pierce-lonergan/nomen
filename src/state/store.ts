@@ -83,6 +83,7 @@ interface NomenState {
   recordAssessment: (result: AssessmentResult) => Promise<void>
   updateSettings: (patch: Partial<Settings>) => Promise<void>
   advancePhase: (now: number) => Promise<void>
+  addVoiceClip: (personId: string, blob: Blob, durationMs: number, now: number) => Promise<void>
   removePerson: (personId: string) => Promise<void>
   clearRewards: () => void
   replaceAll: (bundle: repo.ExportBundle) => Promise<void>
@@ -416,6 +417,46 @@ export const useStore = create<NomenState>((set, get) => ({
 
     await repo.putAll('items', backfill)
     set((s) => ({ items: [...s.items, ...backfill] }))
+  },
+
+  /**
+   * Attach a voice clip. Opt-in twice over — globally in settings and per person at the control —
+   * and it also mints the Voice → Name schedule item, because a drill with nothing to test against
+   * must not appear in the queue.
+   */
+  async addVoiceClip(personId, blob, durationMs, now) {
+    const { people, items, settings } = get()
+    const person = people.find((p) => p.id === personId)
+    if (!person) return
+
+    const media: MediaRef = {
+      id: uid(),
+      personId,
+      kind: 'AUDIO',
+      encounterId: person.encounters[person.encounters.length - 1]?.id ?? uid(),
+      capturedAt: now,
+      blob,
+      durationMs,
+    }
+    const updated: Person = { ...person, voiceMediaIds: [...person.voiceMediaIds, media.id] }
+
+    // First clip only: the route opens once, not once per recording.
+    const alreadyScheduled = items.some((i) => i.subjectId === personId && i.mode === 'VOICE_TO_NAME')
+    const newItems =
+      !alreadyScheduled && person.status === 'ACTIVE'
+        ? [createItem(uid(), personId, person.track, 'VOICE_TO_NAME', now, settings)]
+        : []
+
+    await repo.transact([
+      { store: 'people', values: [updated] },
+      { store: 'media', values: [media] },
+      { store: 'items', values: newItems },
+    ])
+    set((st) => ({
+      people: st.people.map((p) => (p.id === personId ? updated : p)),
+      media: [...st.media, media],
+      items: [...st.items, ...newItems],
+    }))
   },
 
   async removePerson(personId) {

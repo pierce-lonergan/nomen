@@ -9,6 +9,14 @@
       content="Nomen — an evidence-led, local-first trainer for remembering people's names."
     />
     <title>Nomen</title>
+    <!-- Relative, like every other asset path in this build: the same bundle has to work at a
+         project sub-path, at a domain root, and from file://. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <link rel="apple-touch-icon" href="./icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Nomen" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   </head>
   <body>
     <div id="root"></div>

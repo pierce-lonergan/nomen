@@ -84,8 +84,6 @@ export const DRILLS: DrillDef[] = [
     mechanism:
       'The left temporal pole is a heteromodal naming hub — it responds near-identically to faces and voices (Waldron et al. 2014; Abel et al. 2015). Training the voice route adds a second way in when the face route stalls.',
     dividedAttention: false,
-    notBuilt:
-      'Recording is not built yet. The schedule mode and this entry exist; the microphone, the playback and the per-person consent indicator do not, so there is nothing to test you against.',
   },
   {
     id: 'NAME_IN_NOISE',
@@ -204,7 +202,15 @@ export function modesForSubject(
   phase: Phase,
   hasImages: boolean,
 ): RetrievalMode[] {
-  return modesForPhase(track, phase).filter((m) => (m === 'NAME_TO_FACE' ? hasImages : true))
+  return modesForPhase(track, phase).filter((m) => {
+    // Both gates are per-person and per-night, because a roster is always a mix. Name → Face
+    // reveals a photograph and Voice → Name plays a clip; without one, the drill is an empty box.
+    if (m === 'NAME_TO_FACE') return hasImages
+    // Voice items are minted by addVoiceClip when the first recording lands, never in bulk here —
+    // consent is given one person at a time and cannot be inferred from a phase.
+    if (m === 'VOICE_TO_NAME') return false
+    return true
+  })
 }
 
 export function nextUnlock(phase: Phase): DrillDef | null {

@@ -6,6 +6,7 @@ import type { Settings } from '../../domain/types'
 import { Chips, Evidence, Header } from '../components'
 import { IconMoon, IconSun } from '../icons'
 import { useTheme, type ThemeChoice } from '../theme'
+import { notifyPermission, requestNotifyPermission } from '../../lib/notify'
 
 /**
  * Settings — the schedule, the data, and the charter.
@@ -61,6 +62,7 @@ export default function SettingsScreen() {
   const [confirmWipe, setConfirmWipe] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
+  const [perm, setPerm] = useState(() => notifyPermission())
 
   async function doExport() {
     const bundle = await exportAll(Date.now())
@@ -161,6 +163,76 @@ export default function SettingsScreen() {
             the most out of the night. It is also the steadiest anchor in most people’s day.
           </p>
         </div>
+      </div>
+
+      <h2>Reminders</h2>
+      <div className="card">
+        {perm === 'unsupported' ? (
+          <p className="record-note">This browser cannot show notifications, so reminders are unavailable.</p>
+        ) : perm === 'denied' ? (
+          <p className="record-note">
+            Notifications are blocked for this site in your browser settings. Nomen cannot undo that
+            from here — it has to be changed where you blocked it.
+          </p>
+        ) : (
+          <>
+            <Chips
+              label="Review nudges"
+              value={state.settings.notificationsEnabled && perm === 'granted' ? 'on' : 'off'}
+              options={[
+                { value: 'off', label: 'Off' },
+                { value: 'on', label: 'On' },
+              ]}
+              onChange={(v) => {
+                void (async () => {
+                  if (v === 'off') {
+                    await state.updateSettings({ notificationsEnabled: false })
+                    return
+                  }
+                  // Only ever asked from this tap. An unsolicited permission dialog on load is
+                  // precisely "a notification you did not configure".
+                  const result = await requestNotifyPermission()
+                  setPerm(result)
+                  await state.updateSettings({ notificationsEnabled: result === 'granted' })
+                })()
+              }}
+            />
+            <p className="record-note">
+              At most one a day, never between{' '}
+              <span className="fig">22</span>:00 and <span className="fig">07</span>:00, and only
+              when something is genuinely due. It fires on your state rather than on a fixed hour —
+              the pre-sleep slot with a queue, a morning worth clearing, or three names at real
+              decay risk.
+            </p>
+            <p className="record-note">
+              No server is involved. The page decides and hands the message to its own service
+              worker, so there is no channel by which anyone else could send you one.
+            </p>
+          </>
+        )}
+      </div>
+
+      <h2>Voice</h2>
+      <div className="card">
+        <Chips
+          label="Record voices"
+          value={state.settings.voiceCaptureEnabled ? 'on' : 'off'}
+          options={[
+            { value: 'off', label: 'Off' },
+            { value: 'on', label: 'On' },
+          ]}
+          onChange={(v) => void state.updateSettings({ voiceCaptureEnabled: v === 'on' })}
+        />
+        <p className="record-note">
+          Off by default, and deliberately a separate decision from photographs. Recording someone
+          is a different act from photographing them — in a fair number of places a different act
+          legally — and this is the one capture the app will not let you default into.
+        </p>
+        <p className="record-note">
+          With it on, a hold-to-record control appears on each person. Nothing records unless a
+          finger is on it, clips stop at eight seconds, and the microphone is released the instant
+          you let go. Clips never leave this device, like everything else here.
+        </p>
       </div>
 
       <h2>Your data</h2>

@@ -315,9 +315,13 @@ function Prompt({
   person: Person
   image: MediaRef | null
 }) {
-  // FACE_TO_NAME only. A VOICE_TO_NAME prompt showing a photograph is the face drill wearing the
-  // wrong label — it would measure the route it was meant to bypass. The mode cannot be scheduled
-  // until recording exists (see the drill registry), and this branch must not quietly accept it.
+  // A voice prompt plays a clip and shows NO photograph. Sharing the face branch, as this once
+  // did, is the face drill wearing the wrong label — it would measure the very route the voice
+  // drill exists to bypass.
+  if (item.mode === 'VOICE_TO_NAME') {
+    return <VoicePrompt person={person} />
+  }
+
   if (item.mode === 'FACE_TO_NAME') {
     return image ? (
       <img className="face" src={mediaSrc(image)} alt="" />
@@ -372,6 +376,33 @@ function DividedAttentionTask() {
           <button onClick={() => setHits((h) => (digit === 7 ? h + 1 : h))}>Tap</button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * The voice prompt: a clip, and nothing else on screen that could give the name away.
+ *
+ * `controls` rather than autoplay — browsers block unprompted audio, and a drill whose stimulus
+ * silently fails to play would be scored as a miss the user never had a chance at.
+ */
+function VoicePrompt({ person }: { person: Person }) {
+  const media = useStore((s) => s.media)
+  const clips = media.filter((m) => m.personId === person.id && m.kind === 'AUDIO')
+  const clip = clips[Math.floor(Math.random() * clips.length)]
+  if (!clip) {
+    return (
+      <div className="face-placeholder">
+        The recording for this person is missing, so there is nothing to play. Retrieve from the
+        context instead: {person.context || 'nothing recorded, so this one is a cold guess'}.
+      </div>
+    )
+  }
+  return (
+    <div>
+      <span className="retrieval__mode">listen</span>
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio controls src={mediaSrc(clip)} style={{ inlineSize: '100%', marginBlockStart: 'var(--s-2)' }} />
     </div>
   )
 }

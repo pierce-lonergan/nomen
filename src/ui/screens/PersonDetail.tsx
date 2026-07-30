@@ -9,6 +9,7 @@ import { useNow } from '../hooks'
 import { Evidence, FaceConfidenceBadge, Header, PersonName, Stat } from '../components'
 import { IconBack } from '../icons'
 import { mediaSrc } from '../../lib/media'
+import { VoiceCapture } from '../VoiceCapture'
 
 /**
  * One person's record.
@@ -174,6 +175,10 @@ export default function PersonDetail() {
           </p>
         </div>
       </div>
+
+      {/* Voice is offered for people only. A place has no voice, and a character in a novel has no
+          voice you could record. */}
+      {person.track === 'PERSON' && <VoiceCapture person={person} media={state.media} />}
 
       <h2>Retrieval history</h2>
       <div className="card">

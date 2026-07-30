@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { selectPlan, useStore } from '../state/store'
-import { timeOfDay } from '../domain/program/dailyPlan'
+import { shouldPrompt, timeOfDay } from '../domain/program/dailyPlan'
+import { dayKey } from '../domain/time'
+import { deliverNudge, inQuietHours, notifyPermission, nudgeFor } from '../lib/notify'
 import { useNow } from './hooks'
 import { IconCapture, IconInsights, IconPeople, IconProgram, IconToday } from './icons'
 import Onboarding from './screens/Onboarding'
@@ -54,6 +56,42 @@ export default function App() {
     if (slot === 'PRE_SLEEP') root.setAttribute('data-slot', 'pre-sleep')
     else root.removeAttribute('data-slot')
   }, [loaded, now, settings])
+
+  /**
+   * The nudge.
+   *
+   * `shouldPrompt()` has decided *whether* to fire since v0.1 and had no delivery mechanism; this
+   * is it. Six gates must all agree — opted in, permission granted, outside quiet hours, the
+   * domain says fire, something is genuinely due, and none sent today — and the day is stamped
+   * before the notification rather than after, so a failure part-way through cannot produce two.
+   *
+   * Runs on the same one-minute clock as the pre-sleep theme, which is frequent enough for a slot
+   * that lasts hours and far too infrequent to nag.
+   */
+  useEffect(() => {
+    if (!loaded || !settings.notificationsEnabled) return
+    if (notifyPermission() !== 'granted') return
+    if (inQuietHours(now)) return
+
+    const day = dayKey(now)
+    if (settings.lastNudgeDay === day) return
+
+    const state = useStore.getState()
+    const plan = selectPlan(state, now)
+    const today = state.days.find((d) => d.day === day)
+    if (!shouldPrompt(plan, now, today).fire) return
+
+    const nudge = nudgeFor(plan)
+    if (!nudge) return
+
+    void (async () => {
+      // Stamped first. If delivery throws after a successful show, a retry next minute would send
+      // a second notification for the same day — the one thing the promise rules out.
+      await state.updateSettings({ lastNudgeDay: day })
+      const shown = await deliverNudge(nudge, `nomen-${day}`)
+      if (!shown) await state.updateSettings({ lastNudgeDay: undefined })
+    })()
+  }, [loaded, now, settings.notificationsEnabled, settings.lastNudgeDay])
 
   if (!loaded) {
     return (
