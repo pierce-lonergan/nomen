@@ -7,6 +7,9 @@ import { buildCue, easeCue } from '../../domain/scheduler/cueLadder'
 import { competenceFeedback } from '../../domain/engagement/rewards'
 import { nextDrillImage } from '../../domain/faceVariety'
 import { currentIntervalLabel } from '../../domain/scheduler/schedule'
+import { clusterFor } from '../../domain/drills/interference'
+import { drillsLive } from '../../domain/drills/registry'
+import { speakInNoise, speechAvailable } from '../../lib/audio'
 import { useNow, useTicker } from '../hooks'
 import { Empty, Evidence, Header, PersonName } from '../components'
 import { mediaSrc } from '../../lib/media'
@@ -36,6 +39,37 @@ const GRADES: { grade: Grade; label: string; sub: string; strength: 0 | 1 | 2 | 
   { grade: 'INSTANT', label: 'Instantly', sub: `under ${INSTANT_THRESHOLD_MS / 1000}s`, strength: 3 },
 ]
 
+/**
+ * Drills that are a *way of running* the ordinary session rather than a separate schedule mode.
+ *
+ * All four ride FACE_TO_NAME items, which is why they were never schedulable as their own
+ * RetrievalMode and why they sat marked "not built" for so long: they are not queue entries, they
+ * are how the queue is presented. Divided Attention was already built this way; the other three
+ * now follow the same shape.
+ */
+export type SessionDrill = 'PLAIN' | 'NAME_IN_NOISE' | 'DIVIDED_ATTENTION' | 'SPEED_RUN' | 'INTERFERENCE'
+
+const DRILL_LABEL: Record<SessionDrill, string> = {
+  PLAIN: 'Plain',
+  NAME_IN_NOISE: 'In noise',
+  DIVIDED_ATTENTION: 'Under load',
+  SPEED_RUN: 'Speed',
+  INTERFERENCE: 'Interference',
+}
+
+const DRILL_NOTE: Record<SessionDrill, string> = {
+  PLAIN:
+    'The ordinary session: your due queue, in triage order, with the cue ladder available and nothing else changed.',
+  NAME_IN_NOISE:
+    'The underrated cause of name failure is that the name was never accurately perceived. Low-frequency proper names carry no semantic redundancy, so the brain cannot repair them when they are masked. The name is spoken over babble at the reveal — this trains the input stage, not memory, and it is the one drill here that is not about retrieval at all.',
+  DIVIDED_ATTENTION:
+    'Imagery mnemonics gave no benefit when attempted during real conversation, and retrieval practice under divided attention barely beat spontaneous rehearsal. If the skill has to survive a conversation, some of the practice has to happen with your attention split.',
+  SPEED_RUN:
+    'Accuracy is assumed; this is about latency. Automatisation follows a power law of practice, and full stimulus-driven automaticity is not attainable — every new person is a novel binding — but large speed-ups and reduced felt effort are. The queue is reordered longest-held first, because that is where fluency work belongs.',
+  INTERFERENCE:
+    'Learning many similar names creates proactive interference, and retrieving one name can suppress its competitors. Testing has been shown to protect against it, so the counter is more retrieval rather than less exposure. Names that genuinely compete on your own roster are placed next to each other, and the four-choice cue draws its foils from that set.',
+}
+
 const MODE_LABEL: Record<string, string> = {
   FACE_TO_NAME: 'face → name',
   NAME_TO_FACE: 'name → face',
@@ -54,11 +88,68 @@ export default function Session() {
   const [revealed, setRevealed] = useState(false)
   const [cueLevel, setCueLevel] = useState<CueLevel>('FREE')
   const [lastFeedback, setLastFeedback] = useState<string | null>(null)
-  const [dividedMode, setDividedMode] = useState(false)
+  const [drill, setDrill] = useState<SessionDrill>('PLAIN')
+  const dividedMode = drill === 'DIVIDED_ATTENTION'
+
+  /**
+   * Which drills this phase opens.
+   *
+   * Read from the registry rather than hard-coded, so a drill's phase gate and its availability
+   * here can never drift apart — the gap between those two was the original defect. Name in noise
+   * additionally needs speech synthesis, and a browser without it must not be offered a drill it
+   * cannot run.
+   */
+  const available = useMemo<SessionDrill[]>(() => {
+    const live = new Set(drillsLive(state.settings.phase).map((d) => d.id))
+    const out: SessionDrill[] = ['PLAIN']
+    if (live.has('NAME_IN_NOISE') && speechAvailable()) out.push('NAME_IN_NOISE')
+    if (live.has('DIVIDED_ATTENTION')) out.push('DIVIDED_ATTENTION')
+    if (live.has('SPEED_RUN')) out.push('SPEED_RUN')
+    if (live.has('INTERFERENCE')) out.push('INTERFERENCE')
+    return out
+  }, [state.settings.phase])
   const [lastImageId, setLastImageId] = useState<string | null>(null)
   const startedAt = useRef<number>(Date.now())
+  // A visible clock, and only under Speed. Everywhere else a running timer would be exactly the
+  // manufactured urgency the charter forbids; here the elapsed time IS the thing being trained.
+  const speedTick = useTicker(drill === 'SPEED_RUN' && !revealed, 100)
+  const elapsed = drill === 'SPEED_RUN' ? Date.now() - startedAt.current : 0
+  void speedTick
 
-  const queue = plan.queue.queue
+  /**
+   * The drill reorders the queue; it never changes which items are due.
+   *
+   * That distinction is load-bearing. Changing the *set* would split the recall@delay denominators
+   * and make a speed run's numbers incomparable with an ordinary session's. Changing the order is
+   * free — the same items, met in a sequence chosen to expose the thing the drill trains.
+   */
+  const queue = useMemo(() => {
+    const base = plan.queue.queue
+    if (drill === 'SPEED_RUN') {
+      // Longest-held first. Accuracy is assumed here, so the work belongs on items that are
+      // already solid and only need to get faster.
+      return [...base].sort((a, b) => b.rung - a.rung || a.id.localeCompare(b.id))
+    }
+    if (drill === 'INTERFERENCE') {
+      // Competitors adjacent, so they are retrieved against each other rather than in isolation —
+      // which is the entire mechanism.
+      const rank = new Map<string, number>()
+      let group = 0
+      for (const it of base) {
+        if (rank.has(it.subjectId)) continue
+        const subject = state.people.find((p) => p.id === it.subjectId)
+        const rivals = subject ? clusterFor(subject, state.people) : []
+        rank.set(it.subjectId, group)
+        for (const r of rivals) if (!rank.has(r.id)) rank.set(r.id, group)
+        group++
+      }
+      return [...base].sort(
+        (a, b) => (rank.get(a.subjectId) ?? 0) - (rank.get(b.subjectId) ?? 0) || a.id.localeCompare(b.id),
+      )
+    }
+    return base
+  }, [plan.queue.queue, drill, state.people])
+
   const item: ScheduleItem | undefined = queue[index]
   const person = state.people.find((p) => p.id === item?.subjectId)
 
@@ -68,6 +159,19 @@ export default function Session() {
     setRevealed(false)
     setCueLevel(item.cueFloor)
   }, [item?.id])
+
+  /**
+   * Name in noise: the answer arrives through babble rather than on the page.
+   *
+   * Fires on the reveal, not on the prompt — masking the stimulus before retrieval would test
+   * perception instead of memory, and this drill is meant to add a perceptual channel to the
+   * feedback, not replace the retrieval it follows.
+   */
+  useEffect(() => {
+    if (drill !== 'NAME_IN_NOISE' || !revealed || !person) return
+    const stop = speakInNoise(person.givenName, 0.16)
+    return stop
+  }, [drill, revealed, person?.id])
 
   const image = useMemo(
     () => (person ? nextDrillImage(person, state.media, lastImageId) : null),
@@ -106,7 +210,11 @@ export default function Session() {
     (p) => p.id !== person.id && p.track === person.track && p.collection === person.collection,
   )
   const sameTrack = state.people.filter((p) => p.id !== person.id && p.track === person.track)
-  const foils = (sameCollection.length >= 3 ? sameCollection : sameTrack).map((p) => p.givenName)
+  // Under Interference the four-choice foils are the names that genuinely compete with this one,
+  // so eliminating by category is impossible and the choice is the actual confusion.
+  const rivals = drill === 'INTERFERENCE' ? clusterFor(person, state.people) : []
+  const foilPool = rivals.length >= 2 ? rivals : sameCollection.length >= 3 ? sameCollection : sameTrack
+  const foils = foilPool.map((p) => p.givenName)
 
   const nameFace = isHuman(person.track) ? 'person-name' : ''
 
@@ -162,7 +270,18 @@ export default function Session() {
         <div className="retrieval__register">
           <span className="retrieval__mode">{MODE_LABEL[item.mode] ?? item.mode}</span>
           <span className="retrieval__count mono">
-            {String(index + 1).padStart(2, '0')} / {String(queue.length).padStart(2, '0')}
+            {drill === 'SPEED_RUN' && !revealed ? (
+              <>
+                {(elapsed / 1000).toFixed(1)}s{' '}
+                {/* The fluency threshold as a word, never as a colour — a slow retrieval is not an
+                    error, and the charter forbids colour carrying state. */}
+                {elapsed > INSTANT_THRESHOLD_MS && <span className="dim">past fluent</span>}
+              </>
+            ) : (
+              <>
+                {String(index + 1).padStart(2, '0')} / {String(queue.length).padStart(2, '0')}
+              </>
+            )}
           </span>
         </div>
 
@@ -261,16 +380,28 @@ export default function Session() {
 
       {lastFeedback && !revealed && <p className="held">{lastFeedback}</p>}
 
-      {state.settings.phase >= 3 && (
+      {available.length > 1 && (
         <>
-          <button className="full ghost" onClick={() => setDividedMode((d) => !d)}>
-            {dividedMode ? 'Stop the second task' : 'Add a second task (under load)'}
-          </button>
-          <Evidence>
-            Imagery mnemonics gave no benefit when attempted during real conversation, and retrieval
-            practice under divided attention barely beat spontaneous rehearsal. If the skill has to
-            survive a conversation, some of the practice has to happen with your attention split.
-          </Evidence>
+          <h2>Drill</h2>
+          <div className="chips">
+            {available.map((d) => (
+              <button
+                key={d}
+                className={`chip${drill === d ? ' on' : ''}`}
+                aria-pressed={drill === d}
+                onClick={() => {
+                  setDrill(d)
+                  // The queue reorders under some drills, so restarting from the top keeps the
+                  // count honest rather than leaving the index pointing into a different sequence.
+                  setIndex(0)
+                  setRevealed(false)
+                }}
+              >
+                {DRILL_LABEL[d]}
+              </button>
+            ))}
+          </div>
+          <Evidence>{DRILL_NOTE[drill]}</Evidence>
         </>
       )}
     </>

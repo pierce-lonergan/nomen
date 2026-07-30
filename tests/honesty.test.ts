@@ -51,7 +51,26 @@ describe('a drill that says "unlocked" can actually put work in the queue', () =
     }
   })
 
-  it('still SHOWS unbuilt drills — a gap is stated, not hidden', () => {
+  it('has no unbuilt drills left — the catalogue is complete, and that claim is checked', () => {
+    // Every drill in the catalogue can now actually run. This assertion is the thing that stops
+    // the original defect returning: adding a specified-but-unbuilt drill fails here until it is
+    // either built or explicitly marked, and marking it makes it say so in the UI.
+    expect(DRILLS.filter((d) => d.notBuilt).map((d) => d.id)).toEqual([])
+    expect(drillsLive(4)).toHaveLength(DRILLS.length)
+  })
+
+  it('offers every phase-4 drill a route to run — schedulable mode or session variant', () => {
+    // Four drills ride FACE_TO_NAME as session variants rather than as their own schedule mode.
+    // They are legitimate only because the Session presents them; what must never happen again is
+    // a drill with neither a route nor a notBuilt note.
+    const SESSION_VARIANTS = new Set(['NAME_IN_NOISE', 'DIVIDED_ATTENTION', 'SPEED_RUN', 'INTERFERENCE'])
+    for (const d of drillsLive(4)) {
+      const schedulable = modesForPhase(d.track, d.minPhase).includes(d.mode)
+      expect(schedulable || SESSION_VARIANTS.has(d.id), `${d.id} has no way to run`).toBe(true)
+    }
+  })
+
+  it('still SHOWS every drill, built or not — a gap would be stated, not hidden', () => {
     const shown = drillsAvailable(4).map((d) => d.id)
     expect(shown).toContain('VOICE_TO_NAME')
     expect(shown).toContain('INTERFERENCE')

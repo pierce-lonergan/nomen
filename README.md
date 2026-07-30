@@ -209,6 +209,8 @@ and no more. See [`docs/06-privacy.md`](docs/06-privacy.md).
 | [`06-privacy.md`](docs/06-privacy.md) | Commitments, what the app won't invite you to record, residual risk |
 | [`08-visual-system.md`](docs/08-visual-system.md) | The design: three voices, the type-size law, the refusal, motion, and the charter enforced in CSS |
 | [`07-roadmap.md`](docs/07-roadmap.md) | What's built, what's next, and what is explicitly out of scope |
+| [`09-the-long-room.md`](docs/09-the-long-room.md) | The 3D gallery mode: why the 3D is staging and not a learning mechanism, and how it stays inside the charter |
+| [`10-dependencies.md`](docs/10-dependencies.md) | The five runtime dependencies, and why one `npm audit` advisory is deliberately carried rather than "fixed" |
 
 ## Evidence standard
 

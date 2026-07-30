@@ -18,7 +18,7 @@ Mirrors the GitHub issue backlog. Sequenced by leverage against the research, no
   informational rewards; Moment Journal
 - Cast and place tracks
 - Local-first IndexedDB persistence, export/import, hard cascade delete, deterministic demo data
-- 87 unit tests over the domain layer; browser smoke test over every screen
+- 87 unit tests over the domain layer; browser smoke test over every screen (207 as of v0.3)
 
 ## Built (v0.2 — the visual system)
 
@@ -32,27 +32,36 @@ Mirrors the GitHub issue backlog. Sequenced by leverage against the research, no
   previously specified, written, and never wired up
 - `npm run check:contrast` as a build gate, and 12 tests asserting the design laws
 
+## Built (v0.3 — the room, the drills, and the plumbing)
+
+- **The Long Room**: a 3D gallery mode over the real due queue. Staging, never a learning claim —
+  see `09-the-long-room.md` for the measured result that closed that door.
+- **The drill catalogue is complete.** Every one of the nine drills can now actually run. Name →
+  Face schedules at Phase 2 with a backfill; Voice → Name is minted per person on consent; Name in
+  noise, Speed run and Interference ship as session variants of the face drill, the way Under load
+  already did.
+- **Interference clustering**: phonologically competing names are found on your own roster, placed
+  adjacent in the queue, and used as each other's four-choice foils.
+- **Voice capture**: hold-to-record, eight-second cap, opt-in globally and per person.
+- **Review nudges**: local notifications with no server, gated on quiet hours and one per day.
+- **Installable and offline**: manifest, icons, service worker; verified loading with the network
+  genuinely disconnected.
+- Photographs stored as Blobs rather than base64; atomic multi-store writes; validated imports.
+
 ## Next — highest leverage first
 
-1. **Voice capture and the Voice → Name drill.** The registry and schedule modes exist; recording,
-   playback, and the opt-in consent indicator do not. Targets the heteromodal naming hub, and is
-   the second route in when the face route stalls.
-2. **Context-triggered prompts (JITAI).** `shouldPrompt()` already decides *whether* to fire on
-   vulnerability and receptivity; it needs a delivery mechanism — service worker + notifications,
-   and optionally a calendar read so "you have standup at 10 with four people" is real rather than
-   illustrative. This is the largest single retention lever still unbuilt.
-3. **Name-in-noise as a training drill**, not only as a baseline instrument. Currently the
-   `PERCEPTUAL_INPUT` route recommends drills that exist as an assessment but not yet as practice.
-4. **Interference sets.** Auto-cluster phonologically similar names from the user's own roster and
-   test them together (Phase 3). The registry entry is live; the clustering is not.
-5. **Offline imagery workshop.** A guided keyword/interactive-image builder for the small set of
-   high-value or thrice-lapsed people — deliberately unhurried, deliberately never live.
-6. **PWA install + offline shell.** Manifest, service worker, icons. The app is already
-   network-free at runtime; it just isn't installable yet.
-7. **Weekly report loop.** The data exists on Insights; the Sunday five-minute ritual — report
-   card, rescue list, journal review, drill unlock — needs its own surface.
-8. **Parallel assessment forms.** Monthly re-tests currently redraw from one stimulus pool. Proper
+1. **Weekly report loop.** The data exists on Insights; the Sunday five-minute ritual — report
+   card, rescue list, journal review — needs its own surface.
+2. **Parallel assessment forms.** Monthly re-tests currently redraw from one stimulus pool. Proper
    parallel forms would make the month-over-month comparison cleaner.
+3. **Calendar-aware prompts.** `shouldPrompt()` now has a delivery mechanism, but it fires on the
+   app's own state. A calendar read would make "standup at 10 with four people" real rather than
+   illustrative.
+4. **Offline imagery workshop.** A guided keyword/interactive-image builder for the small set of
+   high-value or thrice-lapsed people — deliberately unhurried, deliberately never live.
+5. **The delayed probe for the Long Room.** The mode is an adherence bet and is labelled one. The
+   only instrument that can test it is a delayed, low-stakes probe on novel images at ≥1 week. If
+   that comes back negative the mode should be cut, however good it feels.
 
 ## Considered and deliberately not built
 

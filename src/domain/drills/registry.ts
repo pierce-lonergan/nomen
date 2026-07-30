@@ -38,6 +38,11 @@ export interface DrillDef {
   /**
    * Whether the drill can actually run today.
    *
+   * Currently unset on every entry: the catalogue is fully built. The field stays because the
+   * failure it guards against is a standing one — the next drill someone specifies will be
+   * specified before it is built, and this is where that gets stated rather than hidden behind a
+   * green pill.
+   *
    * This field exists because it was once missing, and the omission produced exactly the failure
    * this app is built to refuse. Five drills were specified, listed on the Program screen with a
    * green "unlocked" pill at the right phase, and never able to produce a single scheduled item —
@@ -95,8 +100,6 @@ export const DRILLS: DrillDef[] = [
     mechanism:
       'The underrated cause of name failure is that the name was never accurately perceived. Low-frequency proper names carry no semantic redundancy, so the brain cannot repair them when they are masked. This trains the input stage, not memory.',
     dividedAttention: false,
-    notBuilt:
-      'Built as a baseline instrument, not yet as practice. You can be measured on it from the Baseline battery; you cannot yet train on it.',
   },
   {
     id: 'DIVIDED_ATTENTION',
@@ -119,8 +122,6 @@ export const DRILLS: DrillDef[] = [
     mechanism:
       'Automatization follows a power law of practice (Logan 1988). Full stimulus-driven automaticity is not attainable — every new person is a novel binding — but large speed-ups and reduced felt effort are.',
     dividedAttention: false,
-    notBuilt:
-      'Not built. Latency is already measured on every retrieval and plotted on Insights, but there is no timed run mode yet.',
   },
   {
     id: 'INTERFERENCE',
@@ -132,8 +133,6 @@ export const DRILLS: DrillDef[] = [
     mechanism:
       'Learning many similar names creates proactive interference, and retrieving some names can suppress competitors. Testing has been shown to protect against proactive interference in face–name learning, so the counter to interference is more retrieval, not less exposure.',
     dividedAttention: false,
-    notBuilt:
-      'Not built. Clustering phonologically similar names out of your own roster is the missing piece; without it there is no interference set to test.',
   },
   {
     id: 'CAST_RECALL',
