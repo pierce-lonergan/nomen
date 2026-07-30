@@ -53,6 +53,46 @@ export type StoreName =
   | 'moments'
   | 'assessments'
 
+/**
+ * Why opening the database has to report on itself.
+ *
+ * An IndexedDB upgrade cannot proceed while another connection is still open at the old version.
+ * The spec's answer is to fire `blocked` and then *wait, indefinitely* — so a user with a second
+ * tab left open from before an update sees the loading line and nothing else, forever, with no
+ * error anywhere. That is exactly what shipping DB v2 did.
+ *
+ * Two halves to the fix, and both are needed:
+ *   · `blocking` — when THIS tab is the one in the way, close so the other tab can proceed. That
+ *     stops this recurring after the release that introduces it, but it cannot help against a tab
+ *     already running older code that never had the handler.
+ *   · `blocked` — when this tab is the one waiting, say so out loud. The open call is left running
+ *     because it resolves on its own the moment the other tab closes, so recovery is automatic
+ *     once the user does the one thing that helps.
+ */
+export type DbStatus =
+  | { state: 'opening' }
+  | { state: 'ready' }
+  | { state: 'blocked'; detail: string }
+  | { state: 'error'; detail: string }
+
+let status: DbStatus = { state: 'opening' }
+const watchers = new Set<(s: DbStatus) => void>()
+
+export function dbStatus(): DbStatus {
+  return status
+}
+
+export function watchDb(fn: (s: DbStatus) => void): () => void {
+  watchers.add(fn)
+  fn(status)
+  return () => watchers.delete(fn)
+}
+
+function setStatus(next: DbStatus) {
+  status = next
+  for (const w of watchers) w(next)
+}
+
 let dbPromise: Promise<IDBPDatabase<NomenDB>> | null = null
 
 export function db(): Promise<IDBPDatabase<NomenDB>> {
@@ -91,11 +131,44 @@ export function db(): Promise<IDBPDatabase<NomenDB>> {
         }
         void oldVersion
       },
-      blocked() {
-        // Another tab is holding the old version open. Silent failure here looks like a hang.
-        console.warn('nomen: database upgrade blocked by another open tab')
+      blocked(currentVersion, blockedVersion) {
+        // We are waiting on someone else. Do NOT abort — the open call resolves by itself the
+        // instant the other connection closes, so the app recovers with no further action beyond
+        // the one thing the user can actually do.
+        setStatus({
+          state: 'blocked',
+          detail: `Another Nomen tab is open on an older version (${currentVersion ?? '?'} → ${blockedVersion ?? DB_VERSION}) and is holding the database.`,
+        })
+      },
+      blocking() {
+        // Someone else is waiting on US. Close, and drop the cached promise so the next call
+        // reopens cleanly rather than reusing a dead connection.
+        void dbPromise?.then((d) => d.close()).catch(() => {})
+        dbPromise = null
+      },
+      terminated() {
+        dbPromise = null
+        setStatus({ state: 'error', detail: 'The browser closed the database unexpectedly.' })
       },
     })
+      .then((instance) => {
+        setStatus({ state: 'ready' })
+        return instance
+      })
+      .catch((err: unknown) => {
+        dbPromise = null
+        const e = err as DOMException
+        setStatus({
+          state: 'error',
+          // VersionError means the stored database is NEWER than this build expects — a user who
+          // loaded a later deploy and then hit a cached older one. Saying so beats "unknown error".
+          detail:
+            e?.name === 'VersionError'
+              ? 'This browser holds a newer Nomen database than this version of the app can read. Reload to pick up the latest version.'
+              : `The database could not be opened (${e?.name ?? 'unknown error'}).`,
+        })
+        throw err
+      })
   }
   return dbPromise
 }

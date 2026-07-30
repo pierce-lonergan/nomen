@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { selectPlan, useStore } from '../state/store'
 import { shouldPrompt, timeOfDay } from '../domain/program/dailyPlan'
 import { dayKey } from '../domain/time'
 import { deliverNudge, inQuietHours, notifyPermission, nudgeFor } from '../lib/notify'
+import { watchDb, type DbStatus } from '../data/db'
 import { useNow } from './hooks'
 import { IconCapture, IconInsights, IconPeople, IconProgram, IconToday } from './icons'
 import Onboarding from './screens/Onboarding'
@@ -35,6 +36,23 @@ export default function App() {
   const firstRun = useStore((s) => s.people.length === 0 && s.assessments.length === 0)
   const now = useNow(60_000)
   const location = useLocation()
+
+  /**
+   * Never sit on the loading line in silence.
+   *
+   * A blocked IndexedDB upgrade waits forever by design, so "Opening your local database…" was a
+   * dead end with no error in the console and nothing for the user to act on. The database now
+   * reports its own state, and after a short grace period the screen says what is wrong and what
+   * to do. The open call keeps running underneath, so closing the other tab recovers on its own.
+   */
+  const [dbState, setDbState] = useState<DbStatus>({ state: 'opening' })
+  const [slow, setSlow] = useState(false)
+  useEffect(() => watchDb(setDbState), [])
+  useEffect(() => {
+    if (loaded) return
+    const id = setTimeout(() => setSlow(true), 4000)
+    return () => clearTimeout(id)
+  }, [loaded])
 
   useEffect(() => {
     void load()
@@ -94,9 +112,27 @@ export default function App() {
   }, [loaded, now, settings.notificationsEnabled, settings.lastNudgeDay])
 
   if (!loaded) {
+    const stuck = dbState.state === 'blocked' || dbState.state === 'error'
     return (
       <div className="app">
-        <p className="empty">Opening your local database…</p>
+        {!stuck && !slow && <p className="empty">Opening your local database…</p>}
+        {(stuck || slow) && (
+          <div className="empty">
+            <h3>{dbState.state === 'error' ? 'The database would not open' : 'Waiting on another tab'}</h3>
+            <p>
+              {dbState.state === 'error'
+                ? dbState.detail
+                : 'Nomen is open in another tab on an older version, and that tab is holding the database while this one tries to upgrade it. Close the other Nomen tab and this will continue on its own — nothing is lost.'}
+            </p>
+            <p className="record-note">
+              Your records are untouched. This is a lock, not a loss: the upgrade cannot start until
+              every other tab lets go.
+            </p>
+            <button className="primary" onClick={() => window.location.reload()}>
+              Reload
+            </button>
+          </div>
+        )}
       </div>
     )
   }
